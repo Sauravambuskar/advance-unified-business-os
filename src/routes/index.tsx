@@ -473,6 +473,11 @@ function Dashboard() {
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 space-y-6">
+            {activeView !== "Executive Dashboard" && (
+              <ModuleView view={activeView} company={company} />
+            )}
+            {activeView === "Executive Dashboard" && (<>
+
             {/* Greeting + context */}
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
