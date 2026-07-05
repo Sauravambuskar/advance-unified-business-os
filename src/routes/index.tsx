@@ -811,8 +811,10 @@ function Dashboard() {
                 </section>
               </div>
             </div>
+            </>)}
           </div>
         </div>
+
       </main>
     </div>
   );
