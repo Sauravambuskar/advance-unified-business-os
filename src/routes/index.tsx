@@ -819,6 +819,43 @@ function Dashboard() {
 
               {/* Right rail */}
               <div className="col-span-12 xl:col-span-4 space-y-6">
+                {/* Top Performers — with real photos */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                  <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Top Sales Reps</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">This month · leaderboard</p>
+                    </div>
+                    <TrendingUp className="size-4 text-emerald-600" />
+                  </div>
+                  <div className="p-3 space-y-1">
+                    {[
+                      { name: "Saurav Mbuskar", role: "Sr. Account Exec", deals: 24, amt: "$412K" },
+                      { name: "Ananya Rao", role: "Enterprise AE", deals: 18, amt: "$286K" },
+                      { name: "Marcus Chen", role: "SMB Lead", deals: 15, amt: "$198K" },
+                      { name: "Priya Shah", role: "Account Manager", deals: 12, amt: "$164K" },
+                    ].map((p, i) => (
+                      <div key={p.name} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-colors">
+                        <div className="relative shrink-0">
+                          <img
+                            src={`https://i.pravatar.cc/120?u=${encodeURIComponent(p.name)}`}
+                            alt={p.name}
+                            className="size-10 rounded-full object-cover ring-1 ring-black/5"
+                          />
+                          <span className="absolute -bottom-1 -right-1 size-5 rounded-full bg-zinc-900 text-white text-[10px] font-bold grid place-items-center ring-2 ring-white">
+                            {i + 1}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.name}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{p.role} · {p.deals} deals</p>
+                        </div>
+                        <span className="text-xs font-mono font-semibold text-zinc-900">{p.amt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
                 {/* Industry modules */}
                 <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
                   <div className="px-5 py-4 border-b border-zinc-950/5">
