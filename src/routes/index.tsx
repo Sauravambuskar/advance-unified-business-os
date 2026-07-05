@@ -478,26 +478,34 @@ function Dashboard() {
             )}
             {activeView === "Executive Dashboard" && (<>
 
-            {/* Greeting + context */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                  {company.kind}
-                </p>
-                <h1 className="text-2xl font-bold tracking-tight mt-1">
-                  Good evening, Sohan — {company.name}
-                </h1>
-                <p className="text-sm text-zinc-500 mt-1">
-                  Executive overview · role-based access · audit-logged
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
-                  <Download className="size-3.5" /> Export report
-                </button>
-                <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
-                  <Zap className="size-3.5" /> New automation
-                </button>
+            {/* Company hero banner */}
+            <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+              <img
+                src={COMPANY_HERO[companyKey]}
+                alt={company.name}
+                className="w-full h-44 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/85 via-zinc-950/55 to-transparent" />
+              <div className="absolute inset-0 flex flex-wrap items-end justify-between gap-4 p-6">
+                <div className="text-white max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
+                    {company.kind}
+                  </p>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1 drop-shadow">
+                    Good evening, Sohan — {company.name}
+                  </h1>
+                  <p className="text-sm text-white/80 mt-1">
+                    Executive overview · role-based access · audit-logged
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-white/30 bg-white/10 backdrop-blur text-white hover:bg-white/20">
+                    <Download className="size-3.5" /> Export report
+                  </button>
+                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-white text-zinc-900 hover:bg-white/90">
+                    <Zap className="size-3.5" /> New automation
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -590,11 +598,11 @@ function Dashboard() {
                           <tr key={l.name + l.camp} className="hover:bg-zinc-50/60 transition-colors">
                             <td className="px-6 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-black/5 shrink-0`}
-                                >
-                                  {l.initials}
-                                </div>
+                                <img
+                                  src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`}
+                                  alt={l.name}
+                                  className="size-9 rounded-full object-cover ring-1 ring-black/5 shrink-0"
+                                />
                                 <div>
                                   <p className="text-sm font-medium">{l.name}</p>
                                   <p className="text-[11px] text-zinc-500">{l.time}</p>
@@ -698,7 +706,84 @@ function Dashboard() {
                   </div>
                 </section>
 
-                {/* Task management */}
+                {/* Recent Won Deals — customer photos */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-sm font-semibold">Recent Won Deals</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Closed this week · {company.name}
+                      </p>
+                    </div>
+                    <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1">
+                      All deals <ArrowUpRight className="size-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {company.leads.slice(0, 3).map((l, i) => (
+                      <div key={l.name} className="rounded-xl overflow-hidden ring-1 ring-black/5 hover:shadow-md transition-shadow">
+                        <div className="h-20 relative">
+                          <img src={coverFor(l.camp || l.name)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />
+                          <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                            Won
+                          </span>
+                        </div>
+                        <div className="p-3 -mt-8 relative">
+                          <img
+                            src={`https://i.pravatar.cc/120?u=${encodeURIComponent(l.name)}`}
+                            alt={l.name}
+                            className="size-12 rounded-full object-cover ring-4 ring-white shadow"
+                          />
+                          <p className="text-sm font-semibold mt-2 truncate">{l.name}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{l.camp}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs font-mono font-semibold text-zinc-900">
+                              ${(42 + i * 18)}K
+                            </span>
+                            <span className="text-[10px] text-zinc-400">{l.time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Lead Sources */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-sm font-semibold">Lead Sources</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Attribution across channels
+                      </p>
+                    </div>
+                    <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium">
+                      Configure
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { name: "Website", pct: 38, tone: "bg-zinc-900" },
+                      { name: "Referral", pct: 24, tone: "bg-emerald-500" },
+                      { name: "Cold Call", pct: 18, tone: "bg-amber-500" },
+                      { name: "Facebook Ads", pct: 12, tone: "bg-blue-500" },
+                      { name: "Events", pct: 8, tone: "bg-violet-500" },
+                    ].map((s) => (
+                      <div key={s.name}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-medium text-zinc-700">{s.name}</span>
+                          <span className="font-mono text-zinc-500">{s.pct}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
+                          <div className={`h-full ${s.tone}`} style={{ width: `${s.pct * 2.5}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+
                 <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
                   <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <div>
@@ -734,6 +819,43 @@ function Dashboard() {
 
               {/* Right rail */}
               <div className="col-span-12 xl:col-span-4 space-y-6">
+                {/* Top Performers — with real photos */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                  <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Top Sales Reps</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">This month · leaderboard</p>
+                    </div>
+                    <TrendingUp className="size-4 text-emerald-600" />
+                  </div>
+                  <div className="p-3 space-y-1">
+                    {[
+                      { name: "Saurav Mbuskar", role: "Sr. Account Exec", deals: 24, amt: "$412K" },
+                      { name: "Ananya Rao", role: "Enterprise AE", deals: 18, amt: "$286K" },
+                      { name: "Marcus Chen", role: "SMB Lead", deals: 15, amt: "$198K" },
+                      { name: "Priya Shah", role: "Account Manager", deals: 12, amt: "$164K" },
+                    ].map((p, i) => (
+                      <div key={p.name} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-colors">
+                        <div className="relative shrink-0">
+                          <img
+                            src={`https://i.pravatar.cc/120?u=${encodeURIComponent(p.name)}`}
+                            alt={p.name}
+                            className="size-10 rounded-full object-cover ring-1 ring-black/5"
+                          />
+                          <span className="absolute -bottom-1 -right-1 size-5 rounded-full bg-zinc-900 text-white text-[10px] font-bold grid place-items-center ring-2 ring-white">
+                            {i + 1}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.name}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{p.role} · {p.deals} deals</p>
+                        </div>
+                        <span className="text-xs font-mono font-semibold text-zinc-900">{p.amt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
                 {/* Industry modules */}
                 <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
                   <div className="px-5 py-4 border-b border-zinc-950/5">
@@ -1043,10 +1165,28 @@ type FullLead = {
   closedActivities: { id: string; title: string; when: string }[];
 };
 
+// Real photos — deterministic by seed via pravatar (portraits) and Unsplash (covers)
 const avatarFor = (seed: string) =>
-  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede,ffdfbf,ffd5dc,d1d4f9`;
-const coverFor = (seed: string) =>
-  `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0369a1,7c3aed,ea580c,059669,dc2626`;
+  `https://i.pravatar.cc/200?u=${encodeURIComponent(seed)}`;
+const COVER_POOL = [
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1581091012184-7c9c05e0e2a3?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80&auto=format&fit=crop",
+];
+const coverFor = (seed: string) => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return COVER_POOL[h % COVER_POOL.length];
+};
+const COMPANY_HERO: Record<string, string> = {
+  group: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1600&q=80&auto=format&fit=crop",
+  education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1600&q=80&auto=format&fit=crop",
+  realestate: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80&auto=format&fit=crop",
+  facility: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1600&q=80&auto=format&fit=crop",
+};
 
 const seedLeads = (company: any): FullLead[] =>
   company.leads.map((l: any, i: number): FullLead => ({
