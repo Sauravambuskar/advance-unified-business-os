@@ -463,7 +463,7 @@ function Dashboard() {
             </button>
             <button className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50">
               <Bell className="size-4 text-zinc-700" />
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500" />
+              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-[#EA4335]" />
             </button>
             <button className="flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors">
               <Plus className="size-4" /> Add person
@@ -1597,7 +1597,7 @@ function PipelineView({ company }: any) {
         <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`size-1.5 rounded-full ${["bg-blue-500","bg-amber-500","bg-violet-500","bg-orange-500","bg-emerald-500"][i]}`} />
+              <span className={`size-1.5 rounded-full ${["bg-[#4285F4]","bg-[#FBBC05]","bg-[#FBBC05]","bg-[#EA4335]","bg-[#34A853]"][i]}`} />
               <p className="text-xs font-semibold">{s.stage}</p>
             </div>
             <span className="text-[10px] font-mono text-zinc-500">{s.count}</span>
