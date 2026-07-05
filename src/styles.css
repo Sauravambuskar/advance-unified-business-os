@@ -148,3 +148,31 @@
     color: var(--color-foreground);
   }
 }
+
+/* Thin, subtle scrollbars — used by the app sidebar and other overflow areas. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.85 0.01 260) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: oklch(0.85 0.01 260);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: oklch(0.75 0.01 260);
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Ensure all images fit their container by default — prevents the overflow /
+   "sticking outside" alignment issues on avatar and cover tiles. */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
