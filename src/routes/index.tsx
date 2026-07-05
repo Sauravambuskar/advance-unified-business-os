@@ -1043,10 +1043,28 @@ type FullLead = {
   closedActivities: { id: string; title: string; when: string }[];
 };
 
+// Real photos — deterministic by seed via pravatar (portraits) and Unsplash (covers)
 const avatarFor = (seed: string) =>
-  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede,ffdfbf,ffd5dc,d1d4f9`;
-const coverFor = (seed: string) =>
-  `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0369a1,7c3aed,ea580c,059669,dc2626`;
+  `https://i.pravatar.cc/200?u=${encodeURIComponent(seed)}`;
+const COVER_POOL = [
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1581091012184-7c9c05e0e2a3?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&q=80&auto=format&fit=crop",
+];
+const coverFor = (seed: string) => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return COVER_POOL[h % COVER_POOL.length];
+};
+const COMPANY_HERO: Record<string, string> = {
+  group: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1600&q=80&auto=format&fit=crop",
+  education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1600&q=80&auto=format&fit=crop",
+  realestate: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80&auto=format&fit=crop",
+  facility: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1600&q=80&auto=format&fit=crop",
+};
 
 const seedLeads = (company: any): FullLead[] =>
   company.leads.map((l: any, i: number): FullLead => ({
