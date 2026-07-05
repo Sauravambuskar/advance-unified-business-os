@@ -75,9 +75,9 @@ const companies: Record<
     initials: "AG",
     tone: "from-zinc-800 to-zinc-600",
     kpis: [
-      { label: "Consolidated Revenue", value: "$4.82M", delta: "+14.2%", deltaTone: "text-emerald-600", icon: DollarSign },
+      { label: "Consolidated Revenue", value: "₹40.0 Cr", delta: "+14.2%", deltaTone: "text-emerald-600", icon: DollarSign },
       { label: "Active Leads", value: "2,148", delta: "+312", deltaTone: "text-emerald-600", icon: Target },
-      { label: "Open Invoices", value: "$684K", delta: "-6.1%", deltaTone: "text-emerald-600", icon: Receipt },
+      { label: "Open Invoices", value: "₹5.68 Cr", delta: "-6.1%", deltaTone: "text-emerald-600", icon: Receipt },
       { label: "Team Utilization", value: "87%", delta: "+3.4%", deltaTone: "text-emerald-600", icon: Activity },
     ],
     leads: [
@@ -87,11 +87,11 @@ const companies: Record<
       { name: "Ma Pena", time: "Today at 7:30 AM", email: "ma.p@inboxmail.com", phone: "(234) 555-0111", camp: "AG-81922", message: "Contract renewal discussion scheduled.", initials: "MP", tone: "bg-[#EA4335] text-white", stage: "Won", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     pipeline: [
-      { stage: "New", count: 84, value: "$412K" },
-      { stage: "Qualified", count: 46, value: "$1.02M" },
-      { stage: "Proposal", count: 22, value: "$1.48M" },
-      { stage: "Negotiation", count: 11, value: "$860K" },
-      { stage: "Won", count: 18, value: "$1.06M" },
+      { stage: "New", count: 84, value: "₹3.42 Cr" },
+      { stage: "Qualified", count: 46, value: "₹8.47 Cr" },
+      { stage: "Proposal", count: 22, value: "₹12.3 Cr" },
+      { stage: "Negotiation", count: 11, value: "₹7.14 Cr" },
+      { stage: "Won", count: 18, value: "₹8.80 Cr" },
     ],
     chart: [
       { m: "JAN", v: 0.42 }, { m: "FEB", v: 0.58 }, { m: "MAR", v: 0.36 }, { m: "APR", v: 0.48 },
@@ -100,7 +100,7 @@ const companies: Record<
     ],
     activity: [
       { title: "New candidate added", body: "Alex Johnson entered Sales pipeline.", time: "2m", tone: "bg-[#4285F4]" },
-      { title: "Invoice #INV-2048 paid", body: "Payment of $28,400 received from Nordic Ltd.", time: "18m", tone: "bg-[#34A853]" },
+      { title: "Invoice #INV-2048 paid", body: "Payment of ₹23.6 L received from Nordic Ltd.", time: "18m", tone: "bg-[#34A853]" },
       { title: "Approval requested", body: "Q3 discount waiver awaiting Company Admin.", time: "1h", tone: "bg-[#EA4335]" },
       { title: "Audit log entry", body: "Role change: Sarah Kim → Manager.", time: "3h", tone: "bg-[#9AA0A6]" },
     ],
@@ -123,8 +123,8 @@ const companies: Record<
     kpis: [
       { label: "Admissions (Term)", value: "1,240", delta: "+18.6%", deltaTone: "text-emerald-600", icon: GraduationCap },
       { label: "Active Students", value: "3,842", delta: "+4.1%", deltaTone: "text-emerald-600", icon: Users },
-      { label: "Fees Collected", value: "$612K", delta: "+9.2%", deltaTone: "text-emerald-600", icon: DollarSign },
-      { label: "Fees Overdue", value: "$48K", delta: "-12%", deltaTone: "text-emerald-600", icon: Clock },
+      { label: "Fees Collected", value: "₹5.08 Cr", delta: "+9.2%", deltaTone: "text-emerald-600", icon: DollarSign },
+      { label: "Fees Overdue", value: "₹39.8 L", delta: "-12%", deltaTone: "text-emerald-600", icon: Clock },
     ],
     leads: [
       { name: "Priya Naidu", time: "Today at 10:05 AM", email: "priya.n@parent.io", phone: "(234) 555-0210", camp: "ADM-9820", message: "Enquiry for Grade 6 mid-term admission.", initials: "PN", tone: "bg-[#4285F4] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
@@ -137,7 +137,7 @@ const companies: Record<
       { stage: "Tour Booked", count: 64, value: "—" },
       { stage: "Application", count: 38, value: "—" },
       { stage: "Offer Sent", count: 22, value: "—" },
-      { stage: "Enrolled", count: 41, value: "$412K" },
+      { stage: "Enrolled", count: 41, value: "₹3.42 Cr" },
     ],
     chart: [
       { m: "JAN", v: 0.32 }, { m: "FEB", v: 0.48 }, { m: "MAR", v: 0.66 }, { m: "APR", v: 0.55 },
@@ -146,7 +146,7 @@ const companies: Record<
     ],
     activity: [
       { title: "New admission enquiry", body: "Priya Naidu — Grade 6, mid-term.", time: "5m", tone: "bg-[#4285F4]" },
-      { title: "Fee payment received", body: "Marco Silva — Term 2 · $2,400.", time: "22m", tone: "bg-[#34A853]" },
+      { title: "Fee payment received", body: "Marco Silva — Term 2 · ₹1.99 L.", time: "22m", tone: "bg-[#34A853]" },
       { title: "Overdue reminder sent", body: "12 parents notified automatically.", time: "1h", tone: "bg-[#FBBC05]" },
       { title: "Class capacity alert", body: "Grade 9-B has 2 seats remaining.", time: "2h", tone: "bg-[#EA4335]" },
     ],
@@ -158,7 +158,7 @@ const companies: Record<
     industry: [
       { label: "Admissions", meta: "128 open enquiries", icon: GraduationCap },
       { label: "Student Management", meta: "3,842 records", icon: Users },
-      { label: "Fee Management", meta: "$48K overdue", icon: DollarSign },
+      { label: "Fee Management", meta: "₹39.8 L overdue", icon: DollarSign },
     ],
   },
   realestate: {
@@ -179,11 +179,11 @@ const companies: Record<
       { name: "Omar Farouk", time: "Yesterday", email: "omar.f@fastmail.net", phone: "(234) 555-0313", camp: "PRJ-Palms", message: "New enquiry from Facebook campaign.", initials: "OF", tone: "bg-[#EA4335] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
     ],
     pipeline: [
-      { stage: "New", count: 62, value: "$4.8M" },
-      { stage: "Site Visit", count: 34, value: "$3.1M" },
-      { stage: "Negotiation", count: 18, value: "$2.4M" },
-      { stage: "Booked", count: 24, value: "$3.6M" },
-      { stage: "Registered", count: 12, value: "$1.9M" },
+      { stage: "New", count: 62, value: "₹39.8 Cr" },
+      { stage: "Site Visit", count: 34, value: "₹25.7 Cr" },
+      { stage: "Negotiation", count: 18, value: "₹19.9 Cr" },
+      { stage: "Booked", count: 24, value: "₹29.9 Cr" },
+      { stage: "Registered", count: 12, value: "₹15.8 Cr" },
     ],
     chart: [
       { m: "JAN", v: 0.48 }, { m: "FEB", v: 0.62 }, { m: "MAR", v: 0.72 }, { m: "APR", v: 0.55 },
@@ -225,11 +225,11 @@ const companies: Record<
       { name: "Meridian HQ", time: "Yesterday", email: "admin@meridian.io", phone: "(234) 555-0413", camp: "SVC-Security", message: "Contract signed — onboarding this week.", initials: "MH", tone: "bg-[#EA4335] text-white", stage: "Won", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     pipeline: [
-      { stage: "New", count: 22, value: "$180K" },
-      { stage: "Qualified", count: 14, value: "$240K" },
-      { stage: "Proposal", count: 9, value: "$320K" },
-      { stage: "Negotiation", count: 6, value: "$210K" },
-      { stage: "Won", count: 11, value: "$412K" },
+      { stage: "New", count: 22, value: "₹1.49 Cr" },
+      { stage: "Qualified", count: 14, value: "₹1.99 Cr" },
+      { stage: "Proposal", count: 9, value: "₹2.66 Cr" },
+      { stage: "Negotiation", count: 6, value: "₹1.74 Cr" },
+      { stage: "Won", count: 11, value: "₹3.42 Cr" },
     ],
     chart: [
       { m: "JAN", v: 0.52 }, { m: "FEB", v: 0.62 }, { m: "MAR", v: 0.58 }, { m: "APR", v: 0.68 },
@@ -744,7 +744,7 @@ function Dashboard() {
                           <p className="text-[11px] text-zinc-500 truncate">{l.camp}</p>
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs font-mono font-semibold text-zinc-900">
-                              ${(42 + i * 18)}K
+                              ₹${(35 + i * 15)}L
                             </span>
                             <span className="text-[10px] text-zinc-400">{l.time}</span>
                           </div>
@@ -835,10 +835,10 @@ function Dashboard() {
                   </div>
                   <div className="p-3 space-y-1">
                     {[
-                      { name: "Saurav Mbuskar", role: "Sr. Account Exec", deals: 24, amt: "$412K" },
-                      { name: "Ananya Rao", role: "Enterprise AE", deals: 18, amt: "$286K" },
-                      { name: "Marcus Chen", role: "SMB Lead", deals: 15, amt: "$198K" },
-                      { name: "Priya Shah", role: "Account Manager", deals: 12, amt: "$164K" },
+                      { name: "Saurav Mbuskar", role: "Sr. Account Exec", deals: 24, amt: "₹3.42 Cr" },
+                      { name: "Ananya Rao", role: "Enterprise AE", deals: 18, amt: "₹2.37 Cr" },
+                      { name: "Marcus Chen", role: "SMB Lead", deals: 15, amt: "₹1.64 Cr" },
+                      { name: "Priya Shah", role: "Account Manager", deals: 12, amt: "₹1.36 Cr" },
                     ].map((p, i) => (
                       <div key={p.name} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-50 transition-colors">
                         <div className="relative shrink-0">
@@ -1616,10 +1616,10 @@ function PipelineView({ company }: any) {
 }
 
 const quotationsData = [
-  { id: "Q-2048", client: "Nordic Ltd.", amount: "$28,400", status: "Approved", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", date: "Jul 02" },
-  { id: "Q-2049", client: "Harbor Group", amount: "$14,900", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", date: "Jul 03" },
-  { id: "Q-2050", client: "Peak Retail", amount: "$8,200", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", date: "Jul 04" },
-  { id: "Q-2051", client: "Meridian HQ", amount: "$42,650", status: "Awaiting Approval", tone: "bg-amber-50 text-amber-700 ring-amber-200", date: "Jul 05" },
+  { id: "Q-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Approved", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", date: "Jul 02" },
+  { id: "Q-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", date: "Jul 03" },
+  { id: "Q-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", date: "Jul 04" },
+  { id: "Q-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Awaiting Approval", tone: "bg-amber-50 text-amber-700 ring-amber-200", date: "Jul 05" },
 ];
 
 function QuotationsView(_: any) {
@@ -1656,10 +1656,10 @@ function QuotationsView(_: any) {
 }
 
 const invoicesData = [
-  { id: "INV-2048", client: "Nordic Ltd.", amount: "$28,400", status: "Paid", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", due: "Jun 28" },
-  { id: "INV-2049", client: "Harbor Group", amount: "$14,900", status: "Overdue", tone: "bg-rose-50 text-rose-700 ring-rose-200", due: "Jun 30" },
-  { id: "INV-2050", client: "Peak Retail", amount: "$8,200", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", due: "Jul 12" },
-  { id: "INV-2051", client: "Meridian HQ", amount: "$42,650", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", due: "Jul 15" },
+  { id: "INV-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Paid", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", due: "Jun 28" },
+  { id: "INV-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Overdue", tone: "bg-rose-50 text-rose-700 ring-rose-200", due: "Jun 30" },
+  { id: "INV-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", due: "Jul 12" },
+  { id: "INV-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", due: "Jul 15" },
 ];
 
 function InvoicingView(_: any) {
@@ -1667,9 +1667,9 @@ function InvoicingView(_: any) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { l: "Outstanding", v: "$684K", tone: "text-amber-600" },
-          { l: "Paid (MTD)", v: "$412K", tone: "text-emerald-600" },
-          { l: "Overdue", v: "$48K", tone: "text-rose-600" },
+          { l: "Outstanding", v: "₹5.68 Cr", tone: "text-amber-600" },
+          { l: "Paid (MTD)", v: "₹3.42 Cr", tone: "text-emerald-600" },
+          { l: "Overdue", v: "₹39.8 L", tone: "text-rose-600" },
         ].map((k) => (
           <div key={k.l} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
             <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
@@ -1909,7 +1909,7 @@ function RolesView() {
 const automationsData = [
   { name: "Auto-assign leads by source", trigger: "New lead", status: "Active" },
   { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active" },
-  { name: "Escalate approvals > $10K", trigger: "Quotation submitted", status: "Active" },
+  { name: "Escalate approvals > ₹8.3 L", trigger: "Quotation submitted", status: "Active" },
   { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused" },
 ];
 
@@ -1946,7 +1946,7 @@ function SettingsView({ company }: any) {
           <div className="flex justify-between"><span className="text-zinc-500">Name</span><span className="font-medium">{company.name}</span></div>
           <div className="flex justify-between"><span className="text-zinc-500">Segment</span><span className="font-medium">{company.kind}</span></div>
           <div className="flex justify-between"><span className="text-zinc-500">Timezone</span><span className="font-medium">Asia/Dhaka</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Currency</span><span className="font-medium">USD</span></div>
+          <div className="flex justify-between"><span className="text-zinc-500">Currency</span><span className="font-medium">INR</span></div>
         </div>
       </Panel>
       <Panel title="Security">
