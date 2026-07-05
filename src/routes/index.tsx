@@ -330,18 +330,35 @@ function Dashboard() {
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           <SectionLabel>Core Modules</SectionLabel>
           {coreNav.map((item) => (
-            <NavItem key={item.label} {...item} />
+            <NavItem
+              key={item.label}
+              {...item}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
 
           <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
           {industry.map((item) => (
-            <NavItem key={item.label} icon={item.icon} label={item.label} />
+            <NavItem
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
 
           <SectionLabel>System</SectionLabel>
           {systemNav.map((item) => (
-            <NavItem key={item.label} {...item} />
+            <NavItem
+              key={item.label}
+              {...item}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
+
         </nav>
 
         <div className="p-3 border-t border-zinc-950/5">
