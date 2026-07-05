@@ -81,10 +81,10 @@ const companies: Record<
       { label: "Team Utilization", value: "87%", delta: "+3.4%", deltaTone: "text-emerald-600", icon: Activity },
     ],
     leads: [
-      { name: "Shawon Black", time: "Today at 9:10 AM", email: "shawon@mailzone.io", phone: "(234) 555-0108", camp: "AG-56728", message: "Group-wide inquiry — interested in enterprise plan.", initials: "SB", tone: "bg-orange-100 text-orange-700", stage: "New", stageTone: "bg-[#E8F0FE] text-[#1967D2] ring-[#4285F4]/25" },
-      { name: "Kamrul Miles", time: "Today at 9:10 AM", email: "miles87@fastmail.net", phone: "(234) 555-0109", camp: "AG-12131", message: "Requesting proposal across three business units.", initials: "KM", tone: "bg-emerald-100 text-emerald-700", stage: "Qualified", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Su Flores", time: "Today at 8:10 AM", email: "su.m@quickinbox.org", phone: "(234) 555-0110", camp: "AG-15167", message: "Follow-up on quotation Q-2048.", initials: "SF", tone: "bg-indigo-100 text-indigo-700", stage: "Proposal", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Ma Pena", time: "Today at 7:30 AM", email: "ma.p@inboxmail.com", phone: "(234) 555-0111", camp: "AG-81922", message: "Contract renewal discussion scheduled.", initials: "MP", tone: "bg-rose-100 text-rose-700", stage: "Won", stageTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
+      { name: "Shawon Black", time: "Today at 9:10 AM", email: "shawon@mailzone.io", phone: "(234) 555-0108", camp: "AG-56728", message: "Group-wide inquiry — interested in enterprise plan.", initials: "SB", tone: "bg-[#FBBC05] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
+      { name: "Kamrul Miles", time: "Today at 9:10 AM", email: "miles87@fastmail.net", phone: "(234) 555-0109", camp: "AG-12131", message: "Requesting proposal across three business units.", initials: "KM", tone: "bg-[#34A853] text-white", stage: "Qualified", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Su Flores", time: "Today at 8:10 AM", email: "su.m@quickinbox.org", phone: "(234) 555-0110", camp: "AG-15167", message: "Follow-up on quotation Q-2048.", initials: "SF", tone: "bg-[#4285F4] text-white", stage: "Proposal", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Ma Pena", time: "Today at 7:30 AM", email: "ma.p@inboxmail.com", phone: "(234) 555-0111", camp: "AG-81922", message: "Contract renewal discussion scheduled.", initials: "MP", tone: "bg-[#EA4335] text-white", stage: "Won", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     pipeline: [
       { stage: "New", count: 84, value: "$412K" },
@@ -99,15 +99,15 @@ const companies: Record<
       { m: "AUG", v: 0.5 }, { m: "SEP", v: 0.7 }, { m: "OCT", v: 0.44 }, { m: "NOV", v: 0.6 }, { m: "DEC", v: 0.38 },
     ],
     activity: [
-      { title: "New candidate added", body: "Alex Johnson entered Sales pipeline.", time: "2m", tone: "bg-amber-400" },
-      { title: "Invoice #INV-2048 paid", body: "Payment of $28,400 received from Nordic Ltd.", time: "18m", tone: "bg-emerald-500" },
-      { title: "Approval requested", body: "Q3 discount waiver awaiting Company Admin.", time: "1h", tone: "bg-rose-500" },
-      { title: "Audit log entry", body: "Role change: Sarah Kim → Manager.", time: "3h", tone: "bg-zinc-400" },
+      { title: "New candidate added", body: "Alex Johnson entered Sales pipeline.", time: "2m", tone: "bg-[#4285F4]" },
+      { title: "Invoice #INV-2048 paid", body: "Payment of $28,400 received from Nordic Ltd.", time: "18m", tone: "bg-[#34A853]" },
+      { title: "Approval requested", body: "Q3 discount waiver awaiting Company Admin.", time: "1h", tone: "bg-[#EA4335]" },
+      { title: "Audit log entry", body: "Role change: Sarah Kim → Manager.", time: "3h", tone: "bg-[#9AA0A6]" },
     ],
     tasks: [
-      { name: "Prepare Q3 board deck", owner: "You", due: "Today", status: "In Progress", statusTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Review consolidated P&L", owner: "Finance", due: "Tomorrow", status: "Pending", statusTone: "bg-[#F1F3F4] text-[#5F6368] ring-[#9AA0A6]/25" },
-      { name: "Approve new vendor contracts", owner: "Ops", due: "Fri", status: "Blocked", statusTone: "bg-[#FCE8E8] text-[#C5221F] ring-[#EA4335]/25" },
+      { name: "Prepare Q3 board deck", owner: "You", due: "Today", status: "In Progress", statusTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Review consolidated P&L", owner: "Finance", due: "Tomorrow", status: "Pending", statusTone: "bg-[#5F6368] text-white ring-[#5F6368]/30" },
+      { name: "Approve new vendor contracts", owner: "Ops", due: "Fri", status: "Blocked", statusTone: "bg-[#EA4335] text-white ring-[#EA4335]/30" },
     ],
     industry: [
       { label: "Real Estate", meta: "8 projects · 124 bookings", icon: Building2 },
@@ -127,10 +127,10 @@ const companies: Record<
       { label: "Fees Overdue", value: "$48K", delta: "-12%", deltaTone: "text-emerald-600", icon: Clock },
     ],
     leads: [
-      { name: "Priya Naidu", time: "Today at 10:05 AM", email: "priya.n@parent.io", phone: "(234) 555-0210", camp: "ADM-9820", message: "Enquiry for Grade 6 mid-term admission.", initials: "PN", tone: "bg-indigo-100 text-indigo-700", stage: "New", stageTone: "bg-[#E8F0FE] text-[#1967D2] ring-[#4285F4]/25" },
-      { name: "Daniel Owens", time: "Today at 9:22 AM", email: "d.owens@family.co", phone: "(234) 555-0211", camp: "ADM-9821", message: "Requested campus tour on Saturday.", initials: "DO", tone: "bg-emerald-100 text-emerald-700", stage: "Tour Booked", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Aisha Rahman", time: "Today at 8:40 AM", email: "aisha.r@mail.net", phone: "(234) 555-0212", camp: "ADM-9822", message: "Scholarship eligibility follow-up.", initials: "AR", tone: "bg-rose-100 text-rose-700", stage: "Proposal", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Marco Silva", time: "Yesterday", email: "marco.s@inbox.com", phone: "(234) 555-0213", camp: "ADM-9823", message: "Fee plan accepted — enrollment confirmed.", initials: "MS", tone: "bg-orange-100 text-orange-700", stage: "Enrolled", stageTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
+      { name: "Priya Naidu", time: "Today at 10:05 AM", email: "priya.n@parent.io", phone: "(234) 555-0210", camp: "ADM-9820", message: "Enquiry for Grade 6 mid-term admission.", initials: "PN", tone: "bg-[#4285F4] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
+      { name: "Daniel Owens", time: "Today at 9:22 AM", email: "d.owens@family.co", phone: "(234) 555-0211", camp: "ADM-9821", message: "Requested campus tour on Saturday.", initials: "DO", tone: "bg-[#34A853] text-white", stage: "Tour Booked", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Aisha Rahman", time: "Today at 8:40 AM", email: "aisha.r@mail.net", phone: "(234) 555-0212", camp: "ADM-9822", message: "Scholarship eligibility follow-up.", initials: "AR", tone: "bg-[#EA4335] text-white", stage: "Proposal", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Marco Silva", time: "Yesterday", email: "marco.s@inbox.com", phone: "(234) 555-0213", camp: "ADM-9823", message: "Fee plan accepted — enrollment confirmed.", initials: "MS", tone: "bg-[#FBBC05] text-white", stage: "Enrolled", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     pipeline: [
       { stage: "Enquiry", count: 128, value: "—" },
@@ -145,15 +145,15 @@ const companies: Record<
       { m: "AUG", v: 0.42 }, { m: "SEP", v: 0.7 }, { m: "OCT", v: 0.5 }, { m: "NOV", v: 0.58 }, { m: "DEC", v: 0.36 },
     ],
     activity: [
-      { title: "New admission enquiry", body: "Priya Naidu — Grade 6, mid-term.", time: "5m", tone: "bg-indigo-500" },
-      { title: "Fee payment received", body: "Marco Silva — Term 2 · $2,400.", time: "22m", tone: "bg-emerald-500" },
-      { title: "Overdue reminder sent", body: "12 parents notified automatically.", time: "1h", tone: "bg-amber-500" },
-      { title: "Class capacity alert", body: "Grade 9-B has 2 seats remaining.", time: "2h", tone: "bg-rose-500" },
+      { title: "New admission enquiry", body: "Priya Naidu — Grade 6, mid-term.", time: "5m", tone: "bg-[#4285F4]" },
+      { title: "Fee payment received", body: "Marco Silva — Term 2 · $2,400.", time: "22m", tone: "bg-[#34A853]" },
+      { title: "Overdue reminder sent", body: "12 parents notified automatically.", time: "1h", tone: "bg-[#FBBC05]" },
+      { title: "Class capacity alert", body: "Grade 9-B has 2 seats remaining.", time: "2h", tone: "bg-[#EA4335]" },
     ],
     tasks: [
-      { name: "Publish Term 3 fee structure", owner: "Registrar", due: "Today", status: "In Progress", statusTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Review scholarship applications", owner: "Admissions", due: "Tomorrow", status: "Pending", statusTone: "bg-[#F1F3F4] text-[#5F6368] ring-[#9AA0A6]/25" },
-      { name: "Send offer letters (Batch 4)", owner: "You", due: "Fri", status: "On Track", statusTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
+      { name: "Publish Term 3 fee structure", owner: "Registrar", due: "Today", status: "In Progress", statusTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Review scholarship applications", owner: "Admissions", due: "Tomorrow", status: "Pending", statusTone: "bg-[#5F6368] text-white ring-[#5F6368]/30" },
+      { name: "Send offer letters (Batch 4)", owner: "You", due: "Fri", status: "On Track", statusTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     industry: [
       { label: "Admissions", meta: "128 open enquiries", icon: GraduationCap },
@@ -173,10 +173,10 @@ const companies: Record<
       { label: "Site Visits Booked", value: "94", delta: "+11", deltaTone: "text-emerald-600", icon: Target },
     ],
     leads: [
-      { name: "Rahim Ahmed", time: "Today at 9:44 AM", email: "rahim.a@buyer.io", phone: "(234) 555-0310", camp: "PRJ-Skyline", message: "Interested in 3BHK, tower B, sea-facing.", initials: "RA", tone: "bg-orange-100 text-orange-700", stage: "Site Visit", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Elena Costa", time: "Today at 9:02 AM", email: "elena.c@mail.co", phone: "(234) 555-0311", camp: "PRJ-Greens", message: "Booking amount transferred — awaiting agreement.", initials: "EC", tone: "bg-emerald-100 text-emerald-700", stage: "Booked", stageTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
-      { name: "Yuki Tanaka", time: "Today at 8:15 AM", email: "yuki.t@inbox.jp", phone: "(234) 555-0312", camp: "PRJ-Skyline", message: "Requesting revised floor plan for Unit 12-C.", initials: "YT", tone: "bg-indigo-100 text-indigo-700", stage: "Negotiation", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Omar Farouk", time: "Yesterday", email: "omar.f@fastmail.net", phone: "(234) 555-0313", camp: "PRJ-Palms", message: "New enquiry from Facebook campaign.", initials: "OF", tone: "bg-rose-100 text-rose-700", stage: "New", stageTone: "bg-[#E8F0FE] text-[#1967D2] ring-[#4285F4]/25" },
+      { name: "Rahim Ahmed", time: "Today at 9:44 AM", email: "rahim.a@buyer.io", phone: "(234) 555-0310", camp: "PRJ-Skyline", message: "Interested in 3BHK, tower B, sea-facing.", initials: "RA", tone: "bg-[#FBBC05] text-white", stage: "Site Visit", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Elena Costa", time: "Today at 9:02 AM", email: "elena.c@mail.co", phone: "(234) 555-0311", camp: "PRJ-Greens", message: "Booking amount transferred — awaiting agreement.", initials: "EC", tone: "bg-[#34A853] text-white", stage: "Booked", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
+      { name: "Yuki Tanaka", time: "Today at 8:15 AM", email: "yuki.t@inbox.jp", phone: "(234) 555-0312", camp: "PRJ-Skyline", message: "Requesting revised floor plan for Unit 12-C.", initials: "YT", tone: "bg-[#4285F4] text-white", stage: "Negotiation", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Omar Farouk", time: "Yesterday", email: "omar.f@fastmail.net", phone: "(234) 555-0313", camp: "PRJ-Palms", message: "New enquiry from Facebook campaign.", initials: "OF", tone: "bg-[#EA4335] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
     ],
     pipeline: [
       { stage: "New", count: 62, value: "$4.8M" },
@@ -191,15 +191,15 @@ const companies: Record<
       { m: "AUG", v: 0.66 }, { m: "SEP", v: 0.58 }, { m: "OCT", v: 0.42 }, { m: "NOV", v: 0.52 }, { m: "DEC", v: 0.44 },
     ],
     activity: [
-      { title: "Booking confirmed", body: "Elena Costa — Unit A-1203, Skyline.", time: "4m", tone: "bg-emerald-500" },
-      { title: "Site visit scheduled", body: "Rahim Ahmed — Saturday 11:00 AM.", time: "25m", tone: "bg-amber-500" },
-      { title: "Price approval pending", body: "Discount request on Unit B-704.", time: "1h", tone: "bg-rose-500" },
-      { title: "Inventory synced", body: "Skyline · 12 units marked sold.", time: "2h", tone: "bg-zinc-400" },
+      { title: "Booking confirmed", body: "Elena Costa — Unit A-1203, Skyline.", time: "4m", tone: "bg-[#34A853]" },
+      { title: "Site visit scheduled", body: "Rahim Ahmed — Saturday 11:00 AM.", time: "25m", tone: "bg-[#FBBC05]" },
+      { title: "Price approval pending", body: "Discount request on Unit B-704.", time: "1h", tone: "bg-[#EA4335]" },
+      { title: "Inventory synced", body: "Skyline · 12 units marked sold.", time: "2h", tone: "bg-[#9AA0A6]" },
     ],
     tasks: [
-      { name: "Finalize Palms brochure", owner: "Marketing", due: "Today", status: "In Progress", statusTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Verify Tower B unit inventory", owner: "Ops", due: "Tomorrow", status: "On Track", statusTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
-      { name: "Draft Greens booking agreement", owner: "Legal", due: "Fri", status: "Pending", statusTone: "bg-[#F1F3F4] text-[#5F6368] ring-[#9AA0A6]/25" },
+      { name: "Finalize Palms brochure", owner: "Marketing", due: "Today", status: "In Progress", statusTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Verify Tower B unit inventory", owner: "Ops", due: "Tomorrow", status: "On Track", statusTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
+      { name: "Draft Greens booking agreement", owner: "Legal", due: "Fri", status: "Pending", statusTone: "bg-[#5F6368] text-white ring-[#5F6368]/30" },
     ],
     industry: [
       { label: "Projects", meta: "8 active launches", icon: Building2 },
@@ -219,10 +219,10 @@ const companies: Record<
       { label: "Active Clients", value: "68", delta: "+3", deltaTone: "text-emerald-600", icon: Users },
     ],
     leads: [
-      { name: "Nordic Ltd.", time: "Today at 9:30 AM", email: "ops@nordic.co", phone: "(234) 555-0410", camp: "SVC-Retail", message: "Extension request — 6 additional retail sites.", initials: "NL", tone: "bg-emerald-100 text-emerald-700", stage: "Proposal", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Harbor Group", time: "Today at 9:08 AM", email: "pm@harbor.io", phone: "(234) 555-0411", camp: "SVC-HVAC", message: "HVAC AMC renewal for 4 towers.", initials: "HG", tone: "bg-indigo-100 text-indigo-700", stage: "Negotiation", stageTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Peak Retail", time: "Today at 8:52 AM", email: "facilities@peak.com", phone: "(234) 555-0412", camp: "SVC-Cleaning", message: "New enquiry from referral.", initials: "PR", tone: "bg-orange-100 text-orange-700", stage: "New", stageTone: "bg-[#E8F0FE] text-[#1967D2] ring-[#4285F4]/25" },
-      { name: "Meridian HQ", time: "Yesterday", email: "admin@meridian.io", phone: "(234) 555-0413", camp: "SVC-Security", message: "Contract signed — onboarding this week.", initials: "MH", tone: "bg-rose-100 text-rose-700", stage: "Won", stageTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
+      { name: "Nordic Ltd.", time: "Today at 9:30 AM", email: "ops@nordic.co", phone: "(234) 555-0410", camp: "SVC-Retail", message: "Extension request — 6 additional retail sites.", initials: "NL", tone: "bg-[#34A853] text-white", stage: "Proposal", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Harbor Group", time: "Today at 9:08 AM", email: "pm@harbor.io", phone: "(234) 555-0411", camp: "SVC-HVAC", message: "HVAC AMC renewal for 4 towers.", initials: "HG", tone: "bg-[#4285F4] text-white", stage: "Negotiation", stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Peak Retail", time: "Today at 8:52 AM", email: "facilities@peak.com", phone: "(234) 555-0412", camp: "SVC-Cleaning", message: "New enquiry from referral.", initials: "PR", tone: "bg-[#FBBC05] text-white", stage: "New", stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30" },
+      { name: "Meridian HQ", time: "Yesterday", email: "admin@meridian.io", phone: "(234) 555-0413", camp: "SVC-Security", message: "Contract signed — onboarding this week.", initials: "MH", tone: "bg-[#EA4335] text-white", stage: "Won", stageTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
     ],
     pipeline: [
       { stage: "New", count: 22, value: "$180K" },
@@ -237,15 +237,15 @@ const companies: Record<
       { m: "AUG", v: 0.72 }, { m: "SEP", v: 0.6 }, { m: "OCT", v: 0.48 }, { m: "NOV", v: 0.54 }, { m: "DEC", v: 0.42 },
     ],
     activity: [
-      { title: "Ticket closed within SLA", body: "Harbor Group · HVAC alert.", time: "8m", tone: "bg-emerald-500" },
-      { title: "New client onboarded", body: "Meridian HQ — 2 sites active.", time: "32m", tone: "bg-indigo-500" },
-      { title: "Preventive maintenance due", body: "Peak Retail · monthly inspection.", time: "1h", tone: "bg-amber-500" },
-      { title: "Audit log entry", body: "Vendor permission updated by Admin.", time: "3h", tone: "bg-zinc-400" },
+      { title: "Ticket closed within SLA", body: "Harbor Group · HVAC alert.", time: "8m", tone: "bg-[#34A853]" },
+      { title: "New client onboarded", body: "Meridian HQ — 2 sites active.", time: "32m", tone: "bg-[#4285F4]" },
+      { title: "Preventive maintenance due", body: "Peak Retail · monthly inspection.", time: "1h", tone: "bg-[#FBBC05]" },
+      { title: "Audit log entry", body: "Vendor permission updated by Admin.", time: "3h", tone: "bg-[#9AA0A6]" },
     ],
     tasks: [
-      { name: "Renew Harbor AMC", owner: "Accounts", due: "Today", status: "In Progress", statusTone: "bg-[#FEF7E0] text-[#B06000] ring-[#FBBC05]/25" },
-      { name: "Deploy Meridian access badges", owner: "Ops", due: "Tomorrow", status: "On Track", statusTone: "bg-[#E6F4EA] text-[#188038] ring-[#34A853]/25" },
-      { name: "Review vendor SLAs", owner: "You", due: "Fri", status: "Pending", statusTone: "bg-[#F1F3F4] text-[#5F6368] ring-[#9AA0A6]/25" },
+      { name: "Renew Harbor AMC", owner: "Accounts", due: "Today", status: "In Progress", statusTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" },
+      { name: "Deploy Meridian access badges", owner: "Ops", due: "Tomorrow", status: "On Track", statusTone: "bg-[#34A853] text-white ring-[#34A853]/30" },
+      { name: "Review vendor SLAs", owner: "You", due: "Fri", status: "Pending", statusTone: "bg-[#5F6368] text-white ring-[#5F6368]/30" },
     ],
     industry: [
       { label: "Client Management", meta: "68 active clients", icon: Users },
@@ -463,7 +463,7 @@ function Dashboard() {
             </button>
             <button className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50">
               <Bell className="size-4 text-zinc-700" />
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500" />
+              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-[#EA4335]" />
             </button>
             <button className="flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors">
               <Plus className="size-4" /> Add person
@@ -561,7 +561,7 @@ function Dashboard() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`size-1.5 rounded-full ${
-                              ["bg-blue-500", "bg-amber-500", "bg-violet-500", "bg-orange-500", "bg-emerald-500"][i]
+                              ["bg-[#4285F4]", "bg-[#FBBC05]", "bg-[#FBBC05]", "bg-[#EA4335]", "bg-[#34A853]"][i]
                             }`}
                           />
                           <p className="text-[11px] text-zinc-500 font-medium">{s.stage}</p>
@@ -769,11 +769,11 @@ function Dashboard() {
                   </div>
                   <div className="space-y-3">
                     {[
-                      { name: "Website", pct: 38, tone: "bg-zinc-900" },
-                      { name: "Referral", pct: 24, tone: "bg-emerald-500" },
-                      { name: "Cold Call", pct: 18, tone: "bg-amber-500" },
-                      { name: "Facebook Ads", pct: 12, tone: "bg-blue-500" },
-                      { name: "Events", pct: 8, tone: "bg-violet-500" },
+                      { name: "Website", pct: 38, tone: "bg-[#5F6368]" },
+                      { name: "Referral", pct: 24, tone: "bg-[#34A853]" },
+                      { name: "Cold Call", pct: 18, tone: "bg-[#FBBC05]" },
+                      { name: "Facebook Ads", pct: 12, tone: "bg-[#4285F4]" },
+                      { name: "Events", pct: 8, tone: "bg-[#9AA0A6]" },
                     ].map((s) => (
                       <div key={s.name}>
                         <div className="flex items-center justify-between text-xs mb-1">
@@ -1597,7 +1597,7 @@ function PipelineView({ company }: any) {
         <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className={`size-1.5 rounded-full ${["bg-blue-500","bg-amber-500","bg-violet-500","bg-orange-500","bg-emerald-500"][i]}`} />
+              <span className={`size-1.5 rounded-full ${["bg-[#4285F4]","bg-[#FBBC05]","bg-[#FBBC05]","bg-[#EA4335]","bg-[#34A853]"][i]}`} />
               <p className="text-xs font-semibold">{s.stage}</p>
             </div>
             <span className="text-[10px] font-mono text-zinc-500">{s.count}</span>
