@@ -1001,7 +1001,397 @@ function CRMView({ company }: any) {
   );
 }
 
+// ------------------------------------------------------------------
+// Editable Lead Management (Zoho-style detail with inline editing)
+// ------------------------------------------------------------------
+type FullLead = {
+  id: string;
+  owner: string;
+  name: string;
+  title: string;
+  company: string;
+  email: string;
+  secondaryEmail: string;
+  phone: string;
+  mobile: string;
+  fax: string;
+  website: string;
+  source: string;
+  industry: string;
+  revenue: string;
+  employees: string;
+  rating: string;
+  status: string;
+  emailOptOut: boolean;
+  skype: string;
+  twitter: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  description: string;
+  createdBy: string;
+  createdAt: string;
+  modifiedBy: string;
+  modifiedAt: string;
+  avatar: string;
+  cover: string;
+  notes: { id: string; author: string; text: string; time: string }[];
+  attachments: { id: string; name: string; size: string }[];
+  openActivities: { id: string; title: string; due: string }[];
+  closedActivities: { id: string; title: string; when: string }[];
+};
+
+const avatarFor = (seed: string) =>
+  `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede,ffdfbf,ffd5dc,d1d4f9`;
+const coverFor = (seed: string) =>
+  `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0369a1,7c3aed,ea580c,059669,dc2626`;
+
+const seedLeads = (company: any): FullLead[] =>
+  company.leads.map((l: any, i: number): FullLead => ({
+    id: `LD-${1000 + i}`,
+    owner: "Saurav Mbuskar",
+    name: l.name,
+    title: ["VP Accounting", "Director of Ops", "CFO", "Procurement Head"][i % 4],
+    company: l.camp,
+    email: l.email,
+    secondaryEmail: "",
+    phone: l.phone,
+    mobile: l.phone.replace(/.$/, "9"),
+    fax: "",
+    website: `https://www.${(l.camp || "example").toLowerCase().replace(/[^a-z]/g, "") || "example"}.com`,
+    source: ["Cold Call", "Website", "Referral", "Facebook Ads"][i % 4],
+    industry: ["Service Provider", "Manufacturing", "Retail", "Real Estate"][i % 4],
+    revenue: ["Rs. 8,50,000.00", "Rs. 12,40,000.00", "Rs. 22,00,000.00", "Rs. 5,60,000.00"][i % 4],
+    employees: ["25", "120", "48", "300"][i % 4],
+    rating: ["Hot", "Warm", "Cold", "Acquired"][i % 4],
+    status: l.stage,
+    emailOptOut: false,
+    skype: l.name.toLowerCase().replace(/\s/g, "-"),
+    twitter: l.name.toLowerCase().replace(/\s/g, "") + "_lead",
+    street: ["37275 St Rt 17m M", "42 Harbor Drive", "18 Maple Ave", "1201 King St"][i % 4],
+    city: ["Middle Island", "Cambridge", "Austin", "Vancouver"][i % 4],
+    state: ["NY", "MA", "TX", "BC"][i % 4],
+    zip: ["11953", "02139", "78701", "V6B"][i % 4],
+    country: "United States",
+    description: l.message,
+    createdBy: "Saurav Mbuskar",
+    createdAt: "Sun, 28 Jun 2026 07:16 PM",
+    modifiedBy: "Saurav Mbuskar",
+    modifiedAt: "Sun, 28 Jun 2026 07:16 PM",
+    avatar: avatarFor(l.name),
+    cover: coverFor(l.camp || l.name),
+    notes: i === 0
+      ? [{ id: "n1", author: "Saurav", text: "Initial discovery call scheduled.", time: "2h ago" }]
+      : [],
+    attachments: [],
+    openActivities: i < 2 ? [{ id: "a1", title: "Follow-up call", due: "Tomorrow 10:00 AM" }] : [],
+    closedActivities: [],
+  }));
+
+function Field({ label, value, onChange, type = "text", multiline = false }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; multiline?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="group grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-100 hover:bg-zinc-50/50 px-2 -mx-2 rounded">
+      <label className="text-xs font-medium text-zinc-500 pt-1">{label}</label>
+      {editing ? (
+        multiline ? (
+          <textarea
+            autoFocus
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={() => setEditing(false)}
+            className="text-sm bg-white ring-1 ring-blue-400 rounded px-2 py-1 outline-none min-h-[60px]"
+          />
+        ) : (
+          <input
+            autoFocus
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={() => setEditing(false)}
+            onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
+            className="text-sm bg-white ring-1 ring-blue-400 rounded px-2 py-1 outline-none"
+          />
+        )
+      ) : (
+        <div
+          onClick={() => setEditing(true)}
+          className="text-sm text-zinc-800 cursor-text py-1 rounded hover:bg-white hover:ring-1 hover:ring-zinc-200 px-2 -mx-2 min-h-[28px] whitespace-pre-wrap"
+        >
+          {value || <span className="text-zinc-400 italic">Click to add…</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeadDetail({ lead, onUpdate, onBack }: {
+  lead: FullLead; onUpdate: (patch: Partial<FullLead>) => void; onBack: () => void;
+}) {
+  const [showDetails, setShowDetails] = useState(true);
+  const [newNote, setNewNote] = useState("");
+  const set = (k: keyof FullLead) => (v: string) => onUpdate({ [k]: v } as any);
+
+  const addNote = () => {
+    if (!newNote.trim()) return;
+    onUpdate({
+      notes: [
+        { id: `n${Date.now()}`, author: lead.owner, text: newNote, time: "just now" },
+        ...lead.notes,
+      ],
+    });
+    setNewNote("");
+  };
+
+  const addAttachment = () => {
+    const name = prompt("Attachment name (e.g. proposal.pdf)");
+    if (!name) return;
+    onUpdate({
+      attachments: [
+        ...lead.attachments,
+        { id: `a${Date.now()}`, name, size: `${Math.floor(Math.random() * 900 + 100)} KB` },
+      ],
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm overflow-hidden">
+        <div className="h-28 relative" style={{ background: `url(${lead.cover}) center/cover, linear-gradient(135deg,#0f172a,#334155)` }}>
+          <button onClick={onBack} className="absolute top-3 left-3 text-xs font-medium bg-white/90 hover:bg-white px-3 py-1.5 rounded-lg ring-1 ring-black/10 shadow-sm">
+            ← Back to Leads
+          </button>
+          <div className="absolute top-3 right-3 flex gap-2">
+            <button className="text-xs font-medium bg-white/90 hover:bg-white px-3 py-1.5 rounded-lg ring-1 ring-black/10 shadow-sm">Send Email</button>
+            <button className="text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 px-3 py-1.5 rounded-lg shadow-sm">Convert</button>
+          </div>
+        </div>
+        <div className="px-6 pb-5 -mt-10 flex items-end gap-4">
+          <img src={lead.avatar} alt={lead.name} className="size-20 rounded-2xl ring-4 ring-white bg-white shadow-md object-cover" />
+          <div className="flex-1 pb-1">
+            <h2 className="text-xl font-bold tracking-tight">{lead.name}</h2>
+            <p className="text-xs text-zinc-500">{lead.title} · {lead.company}</p>
+          </div>
+          <div className="pb-1">
+            <span className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full ring-1 bg-amber-50 text-amber-700 ring-amber-200">
+              {lead.status}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-0 border-t border-zinc-100">
+          {[
+            { l: "Lead Owner", k: "owner" as const },
+            { l: "Email", k: "email" as const },
+            { l: "Phone", k: "phone" as const },
+            { l: "Mobile", k: "mobile" as const },
+            { l: "Lead Status", k: "status" as const },
+          ].map((f) => (
+            <div key={f.k} className="p-4 border-r last:border-r-0 border-zinc-100">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{f.l}</p>
+              <input
+                value={lead[f.k] as string}
+                onChange={(e) => onUpdate({ [f.k]: e.target.value } as any)}
+                className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button onClick={() => setShowDetails((v) => !v)} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+          {showDetails ? "Hide Details" : "Show Details"}
+        </button>
+      </div>
+
+      {showDetails && (
+        <>
+          <Panel title="Lead Information" subtitle="Click any field to edit">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0 p-6">
+              <div>
+                <Field label="Lead Owner" value={lead.owner} onChange={set("owner")} />
+                <Field label="Title" value={lead.title} onChange={set("title")} />
+                <Field label="Phone" value={lead.phone} onChange={set("phone")} />
+                <Field label="Mobile" value={lead.mobile} onChange={set("mobile")} />
+                <Field label="Lead Source" value={lead.source} onChange={set("source")} />
+                <Field label="Industry" value={lead.industry} onChange={set("industry")} />
+                <Field label="Annual Revenue" value={lead.revenue} onChange={set("revenue")} />
+                <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-100 px-2 -mx-2">
+                  <label className="text-xs font-medium text-zinc-500 pt-1">Email Opt Out</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={lead.emailOptOut} onChange={(e) => onUpdate({ emailOptOut: e.target.checked })} className="rounded" />
+                    <span className="text-sm">{lead.emailOptOut ? "Yes" : "No"}</span>
+                  </label>
+                </div>
+                <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 px-2 -mx-2">
+                  <label className="text-xs font-medium text-zinc-500 pt-1">Modified By</label>
+                  <div className="text-sm">
+                    <p className="font-medium">{lead.modifiedBy}</p>
+                    <p className="text-xs text-zinc-500">{lead.modifiedAt}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Field label="Company" value={lead.company} onChange={set("company")} />
+                <Field label="Lead Name" value={lead.name} onChange={set("name")} />
+                <Field label="Email" value={lead.email} onChange={set("email")} type="email" />
+                <Field label="Fax" value={lead.fax} onChange={set("fax")} />
+                <Field label="Website" value={lead.website} onChange={set("website")} />
+                <Field label="Lead Status" value={lead.status} onChange={set("status")} />
+                <Field label="No. of Employees" value={lead.employees} onChange={set("employees")} />
+                <Field label="Rating" value={lead.rating} onChange={set("rating")} />
+                <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 px-2 -mx-2">
+                  <label className="text-xs font-medium text-zinc-500 pt-1">Created By</label>
+                  <div className="text-sm">
+                    <p className="font-medium">{lead.createdBy}</p>
+                    <p className="text-xs text-zinc-500">{lead.createdAt}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Field label="Skype ID" value={lead.skype} onChange={set("skype")} />
+                <Field label="Secondary Email" value={lead.secondaryEmail} onChange={set("secondaryEmail")} type="email" />
+              </div>
+              <div>
+                <Field label="Twitter" value={lead.twitter} onChange={set("twitter")} />
+              </div>
+            </div>
+          </Panel>
+
+          <Panel title="Address Information">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 p-6">
+              <Field label="Street" value={lead.street} onChange={set("street")} />
+              <Field label="City" value={lead.city} onChange={set("city")} />
+              <Field label="State" value={lead.state} onChange={set("state")} />
+              <Field label="Zip Code" value={lead.zip} onChange={set("zip")} />
+              <Field label="Country" value={lead.country} onChange={set("country")} />
+            </div>
+          </Panel>
+
+          <Panel title="Description Information">
+            <div className="p-6">
+              <Field label="Description" value={lead.description} onChange={set("description")} multiline />
+            </div>
+          </Panel>
+
+          <Panel title="Notes" subtitle="Recent last">
+            <div className="p-6 space-y-3">
+              <div className="flex gap-2">
+                <input
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addNote()}
+                  placeholder="Add a note…"
+                  className="flex-1 text-sm rounded-lg ring-1 ring-zinc-200 focus:ring-blue-400 outline-none px-3 py-2"
+                />
+                <button onClick={addNote} className="text-xs font-semibold bg-zinc-900 text-white px-4 rounded-lg hover:bg-zinc-800">Add</button>
+              </div>
+              {lead.notes.length === 0 ? (
+                <p className="text-xs text-zinc-400 italic">No notes yet</p>
+              ) : (
+                <ul className="space-y-2">
+                  {lead.notes.map((n) => (
+                    <li key={n.id} className="rounded-lg bg-amber-50/60 ring-1 ring-amber-100 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold">{n.author}</p>
+                        <p className="text-[10px] text-zinc-500">{n.time}</p>
+                      </div>
+                      <p className="text-sm mt-1">{n.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+
+          <Panel title="Attachments">
+            <div className="p-6 space-y-3">
+              <button onClick={addAttachment} className="text-xs font-semibold bg-white ring-1 ring-zinc-200 hover:ring-zinc-300 px-3 py-1.5 rounded-lg">
+                + Attach File
+              </button>
+              {lead.attachments.length === 0 ? (
+                <p className="text-xs text-zinc-400 italic">No Attachment</p>
+              ) : (
+                <ul className="divide-y divide-zinc-100 ring-1 ring-zinc-100 rounded-lg">
+                  {lead.attachments.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="text-xs text-zinc-500">{a.size}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Panel title="Open Activities">
+              <div className="p-6">
+                {lead.openActivities.length === 0 ? (
+                  <p className="text-xs text-zinc-400 italic">No records found</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {lead.openActivities.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between rounded-lg ring-1 ring-zinc-100 px-3 py-2">
+                        <span className="text-sm font-medium">{a.title}</span>
+                        <span className="text-xs text-zinc-500">{a.due}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+            <Panel title="Closed Activities">
+              <div className="p-6">
+                {lead.closedActivities.length === 0 ? (
+                  <p className="text-xs text-zinc-400 italic">No records found</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {lead.closedActivities.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between rounded-lg ring-1 ring-zinc-100 px-3 py-2">
+                        <span className="text-sm font-medium">{a.title}</span>
+                        <span className="text-xs text-zinc-500">{a.when}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function LeadsView({ company }: any) {
+  const [leads, setLeads] = useState<FullLead[]>(() => seedLeads(company));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const companyKey = company.name as string;
+  const [lastKey, setLastKey] = useState(companyKey);
+  if (lastKey !== companyKey) {
+    setLastKey(companyKey);
+    setLeads(seedLeads(company));
+    setSelectedId(null);
+  }
+
+  const selected = leads.find((l) => l.id === selectedId) || null;
+
+  const updateLead = (patch: Partial<FullLead>) => {
+    if (!selected) return;
+    setLeads((prev) => prev.map((l) => (l.id === selected.id ? { ...l, ...patch, modifiedAt: "Just now" } : l)));
+  };
+
+  if (selected) {
+    return <LeadDetail lead={selected} onUpdate={updateLead} onBack={() => setSelectedId(null)} />;
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -1013,7 +1403,44 @@ function LeadsView({ company }: any) {
           </div>
         ))}
       </div>
-      <CRMView company={company} />
+      <Panel title="Lead Management" subtitle="Click any row to open & edit the full lead record">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+                <th className="px-6 py-3">Lead</th>
+                <th className="px-6 py-3">Company</th>
+                <th className="px-6 py-3">Email</th>
+                <th className="px-6 py-3">Phone</th>
+                <th className="px-6 py-3">Source</th>
+                <th className="px-6 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-950/5">
+              {leads.map((l) => (
+                <tr key={l.id} onClick={() => setSelectedId(l.id)} className="hover:bg-zinc-50/80 cursor-pointer">
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <img src={l.avatar} alt={l.name} className="size-9 rounded-full ring-1 ring-black/5 bg-white object-cover" />
+                      <div>
+                        <p className="text-sm font-medium">{l.name}</p>
+                        <p className="text-[11px] text-zinc-500">{l.title}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.company}</td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-600">{l.source}</td>
+                  <td className="px-6 py-3.5">
+                    <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 bg-amber-50 text-amber-700 ring-amber-200">{l.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
     </>
   );
 }
