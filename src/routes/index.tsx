@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ProgressiveFluxLoader } from "@/components/ui/progressive-flux-loader";
+
 import {
   LayoutDashboard,
   Inbox,
@@ -480,63 +480,38 @@ function Dashboard() {
             {activeView === "Executive Dashboard" && (<>
 
             {/* Company hero banner */}
-            <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm">
-              <img
-                src={COMPANY_HERO[companyKey]}
-                alt={company.name}
-                className="w-full h-44 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/85 via-zinc-950/55 to-transparent" />
-              <div className="absolute inset-0 flex flex-wrap items-end justify-between gap-4 p-6">
-                <div className="text-white max-w-2xl">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
+            <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white">
+              <div className="relative h-24 sm:h-28">
+                <img
+                  src={COMPANY_HERO[companyKey]}
+                  alt={company.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/80 via-zinc-950/40 to-transparent" />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
                     {company.kind}
                   </p>
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1 drop-shadow">
+                  <h1 className="text-xl md:text-2xl font-bold tracking-tight mt-0.5 truncate">
                     Good evening, Sohan — {company.name}
                   </h1>
-                  <p className="text-sm text-white/80 mt-1">
+                  <p className="text-xs text-zinc-500 mt-0.5">
                     Executive overview · role-based access · audit-logged
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-white/30 bg-white/10 backdrop-blur text-white hover:bg-white/20">
+                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50">
                     <Download className="size-3.5" /> Export report
                   </button>
-                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-white text-zinc-900 hover:bg-white/90">
+                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
                     <Zap className="size-3.5" /> New automation
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Live sync indicator — progressive flux loader (theme-neutral multicolor) */}
-            <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm px-5 py-4">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
-                    Live sync · {company.name}
-                  </p>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    Streaming CRM, invoices, and operations data across all firms
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
-                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Connected
-                </span>
-              </div>
-              <ProgressiveFluxLoader
-                duration={10}
-                phases={[
-                  { at: 0, label: "connecting" },
-                  { at: 30, label: "syncing leads" },
-                  { at: 60, label: "reconciling invoices" },
-                  { at: 85, label: "updating dashboards" },
-                  { at: 100, label: "up to date" },
-                ]}
-              />
-            </section>
 
 
             {/* KPI cards */}
@@ -996,17 +971,17 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors ${
         active
-          ? "bg-zinc-100 text-zinc-900 font-medium"
-          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+          ? "bg-zinc-100 text-zinc-900 font-bold"
+          : "text-zinc-700 font-semibold hover:bg-zinc-50 hover:text-zinc-900"
       }`}
     >
-      <Icon className="size-4 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+      <Icon className="size-4 shrink-0" strokeWidth={active ? 2.5 : 2} />
 
       <span className="flex-1 text-left truncate">{label}</span>
       {badge && (
-        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
           {badge}
         </span>
       )}
