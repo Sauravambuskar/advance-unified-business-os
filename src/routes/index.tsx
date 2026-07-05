@@ -833,14 +833,17 @@ function NavItem({
   label,
   active,
   badge,
+  onClick,
 }: {
   icon: any;
   label: string;
   active?: boolean;
   badge?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
         active
           ? "bg-zinc-100 text-zinc-900 font-medium"
@@ -848,6 +851,7 @@ function NavItem({
       }`}
     >
       <Icon className="size-4 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+
       <span className="flex-1 text-left truncate">{label}</span>
       {badge && (
         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
