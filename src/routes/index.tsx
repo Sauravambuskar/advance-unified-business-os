@@ -706,7 +706,84 @@ function Dashboard() {
                   </div>
                 </section>
 
-                {/* Task management */}
+                {/* Recent Won Deals — customer photos */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-sm font-semibold">Recent Won Deals</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Closed this week · {company.name}
+                      </p>
+                    </div>
+                    <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1">
+                      All deals <ArrowUpRight className="size-3" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {company.leads.slice(0, 3).map((l, i) => (
+                      <div key={l.name} className="rounded-xl overflow-hidden ring-1 ring-black/5 hover:shadow-md transition-shadow">
+                        <div className="h-20 relative">
+                          <img src={coverFor(l.camp || l.name)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />
+                          <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                            Won
+                          </span>
+                        </div>
+                        <div className="p-3 -mt-8 relative">
+                          <img
+                            src={`https://i.pravatar.cc/120?u=${encodeURIComponent(l.name)}`}
+                            alt={l.name}
+                            className="size-12 rounded-full object-cover ring-4 ring-white shadow"
+                          />
+                          <p className="text-sm font-semibold mt-2 truncate">{l.name}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">{l.camp}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs font-mono font-semibold text-zinc-900">
+                              ${(42 + i * 18)}K
+                            </span>
+                            <span className="text-[10px] text-zinc-400">{l.time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Lead Sources */}
+                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-sm font-semibold">Lead Sources</h3>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Attribution across channels
+                      </p>
+                    </div>
+                    <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium">
+                      Configure
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { name: "Website", pct: 38, tone: "bg-zinc-900" },
+                      { name: "Referral", pct: 24, tone: "bg-emerald-500" },
+                      { name: "Cold Call", pct: 18, tone: "bg-amber-500" },
+                      { name: "Facebook Ads", pct: 12, tone: "bg-blue-500" },
+                      { name: "Events", pct: 8, tone: "bg-violet-500" },
+                    ].map((s) => (
+                      <div key={s.name}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-medium text-zinc-700">{s.name}</span>
+                          <span className="font-mono text-zinc-500">{s.pct}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-zinc-100 overflow-hidden">
+                          <div className={`h-full ${s.tone}`} style={{ width: `${s.pct * 2.5}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+
                 <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
                   <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <div>
