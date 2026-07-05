@@ -328,7 +328,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
           <SectionLabel>Core Modules</SectionLabel>
           {coreNav.map((item) => (
             <NavItem
