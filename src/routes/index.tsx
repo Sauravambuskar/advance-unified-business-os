@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ProgressiveFluxLoader } from "@/components/ui/progressive-flux-loader";
 import {
   LayoutDashboard,
   Inbox,
