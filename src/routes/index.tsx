@@ -255,7 +255,7 @@ const companies: Record<
 };
 
 const coreNav = [
-  { icon: LayoutDashboard, label: "Executive Dashboard", active: true },
+  { icon: LayoutDashboard, label: "Executive Dashboard" },
   { icon: Users, label: "CRM" },
   { icon: Target, label: "Lead Management", badge: "128" },
   { icon: TrendingUp, label: "Sales Pipeline" },
@@ -268,6 +268,7 @@ const coreNav = [
   { icon: Bell, label: "Notifications", badge: "9+" },
   { icon: BarChart3, label: "Analytics & Reporting" },
 ];
+
 
 const industryNav: Record<CompanyKey, { icon: any; label: string }[]> = {
   group: [
