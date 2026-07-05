@@ -255,7 +255,7 @@ const companies: Record<
 };
 
 const coreNav = [
-  { icon: LayoutDashboard, label: "Executive Dashboard", active: true },
+  { icon: LayoutDashboard, label: "Executive Dashboard" },
   { icon: Users, label: "CRM" },
   { icon: Target, label: "Lead Management", badge: "128" },
   { icon: TrendingUp, label: "Sales Pipeline" },
@@ -268,6 +268,7 @@ const coreNav = [
   { icon: Bell, label: "Notifications", badge: "9+" },
   { icon: BarChart3, label: "Analytics & Reporting" },
 ];
+
 
 const industryNav: Record<CompanyKey, { icon: any; label: string }[]> = {
   group: [
@@ -302,7 +303,9 @@ const systemNav = [
 function Dashboard() {
   const [companyKey, setCompanyKey] = useState<CompanyKey>("group");
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [activeView, setActiveView] = useState<string>("Executive Dashboard");
   const company = companies[companyKey];
+
   const industry = industryNav[companyKey];
 
   const totalPipeline = useMemo(
@@ -327,18 +330,35 @@ function Dashboard() {
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           <SectionLabel>Core Modules</SectionLabel>
           {coreNav.map((item) => (
-            <NavItem key={item.label} {...item} />
+            <NavItem
+              key={item.label}
+              {...item}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
 
           <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
           {industry.map((item) => (
-            <NavItem key={item.label} icon={item.icon} label={item.label} />
+            <NavItem
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
 
           <SectionLabel>System</SectionLabel>
           {systemNav.map((item) => (
-            <NavItem key={item.label} {...item} />
+            <NavItem
+              key={item.label}
+              {...item}
+              active={activeView === item.label}
+              onClick={() => setActiveView(item.label)}
+            />
           ))}
+
         </nav>
 
         <div className="p-3 border-t border-zinc-950/5">
@@ -453,6 +473,11 @@ function Dashboard() {
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8 space-y-6">
+            {activeView !== "Executive Dashboard" && (
+              <ModuleView view={activeView} company={company} />
+            )}
+            {activeView === "Executive Dashboard" && (<>
+
             {/* Greeting + context */}
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -786,8 +811,10 @@ function Dashboard() {
                 </section>
               </div>
             </div>
+            </>)}
           </div>
         </div>
+
       </main>
     </div>
   );
@@ -806,14 +833,17 @@ function NavItem({
   label,
   active,
   badge,
+  onClick,
 }: {
   icon: any;
   label: string;
   active?: boolean;
   badge?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
         active
           ? "bg-zinc-100 text-zinc-900 font-medium"
@@ -821,6 +851,7 @@ function NavItem({
       }`}
     >
       <Icon className="size-4 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+
       <span className="flex-1 text-left truncate">{label}</span>
       {badge && (
         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
@@ -828,5 +859,550 @@ function NavItem({
         </span>
       )}
     </button>
+  );
+}
+
+// ------------------------------------------------------------------
+// Module Views — rendered when a sidebar item other than the
+// Executive Dashboard is active. Every core / industry / system item
+// has a working destination so nothing in the nav is dead.
+// ------------------------------------------------------------------
+function ModuleView({ view, company }: { view: string; company: any }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            {company.name} · Module
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">{view}</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            {moduleBlurb(view)}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
+            <Download className="size-3.5" /> Export
+          </button>
+          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+            <Plus className="size-3.5" /> New
+          </button>
+        </div>
+      </div>
+      {renderModuleBody(view, company)}
+    </div>
+  );
+}
+
+function moduleBlurb(view: string) {
+  const map: Record<string, string> = {
+    "CRM": "Unified customer records · contacts · accounts · engagement history",
+    "Lead Management": "Capture · qualify · auto-assign · nurture",
+    "Sales Pipeline": "Stages · forecasts · deal velocity",
+    "Quotations": "Draft · approve · send · convert to invoice",
+    "Invoicing": "Recurring · one-off · payment reminders automated",
+    "Customer Portal": "Self-service · statements · support tickets",
+    "Task Management": "Assign · due dates · approval workflows",
+    "Project Management": "Phases · milestones · resource allocation",
+    "Document Management": "Contracts · policies · version-controlled storage",
+    "Notifications": "Realtime activity across every module",
+    "Analytics & Reporting": "Executive KPIs · trends · exportable dashboards",
+    "Roles & Permissions": "Granular RBAC · least-privilege enforcement",
+    "Automations": "Rules · triggers · scheduled workflows",
+    "Settings": "Company profile · integrations · billing",
+  };
+  return map[view] ?? "Business module scoped to the selected company";
+}
+
+function renderModuleBody(view: string, company: any) {
+  switch (view) {
+    case "CRM":
+      return <CRMView company={company} />;
+    case "Lead Management":
+      return <LeadsView company={company} />;
+    case "Sales Pipeline":
+      return <PipelineView company={company} />;
+    case "Quotations":
+      return <QuotationsView company={company} />;
+    case "Invoicing":
+      return <InvoicingView company={company} />;
+    case "Customer Portal":
+      return <CustomerPortalView company={company} />;
+    case "Task Management":
+      return <TasksView company={company} />;
+    case "Project Management":
+      return <ProjectsView />;
+    case "Document Management":
+      return <DocumentsView />;
+    case "Notifications":
+      return <NotificationsView company={company} />;
+    case "Analytics & Reporting":
+      return <AnalyticsView company={company} />;
+    case "Roles & Permissions":
+      return <RolesView />;
+    case "Automations":
+      return <AutomationsView />;
+    case "Settings":
+      return <SettingsView company={company} />;
+    default:
+      return <IndustryView view={view} company={company} />;
+  }
+}
+
+function Panel({ title, subtitle, children }: any) {
+  return (
+    <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+      {(title || subtitle) && (
+        <div className="px-6 py-4 border-b border-zinc-950/5">
+          {title && <h3 className="text-sm font-semibold">{title}</h3>}
+          {subtitle && <p className="text-[11px] text-zinc-500 mt-0.5">{subtitle}</p>}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+function CRMView({ company }: any) {
+  return (
+    <Panel title="Contacts & Accounts" subtitle="All customer records for this company">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+              <th className="px-6 py-3">Contact</th>
+              <th className="px-6 py-3">Email</th>
+              <th className="px-6 py-3">Phone</th>
+              <th className="px-6 py-3">Account</th>
+              <th className="px-6 py-3">Stage</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-950/5">
+            {company.leads.map((l: any) => (
+              <tr key={l.name} className="hover:bg-zinc-50/60">
+                <td className="px-6 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-black/5`}>{l.initials}</div>
+                    <p className="text-sm font-medium">{l.name}</p>
+                  </div>
+                </td>
+                <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
+                <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
+                <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
+                <td className="px-6 py-3.5">
+                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${l.stageTone}`}>{l.stage}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+function LeadsView({ company }: any) {
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {["New", "Qualified", "Proposal", "Won"].map((s, i) => (
+          <div key={s} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+            <p className="text-xs text-zinc-500 font-medium">{s}</p>
+            <p className="text-2xl font-bold tracking-tight mt-2">{[128, 46, 22, 18][i]}</p>
+            <p className="text-[11px] text-emerald-600 font-semibold mt-1">Auto-assigned</p>
+          </div>
+        ))}
+      </div>
+      <CRMView company={company} />
+    </>
+  );
+}
+
+function PipelineView({ company }: any) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {company.pipeline.map((s: any, i: number) => (
+        <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`size-1.5 rounded-full ${["bg-blue-500","bg-amber-500","bg-violet-500","bg-orange-500","bg-emerald-500"][i]}`} />
+              <p className="text-xs font-semibold">{s.stage}</p>
+            </div>
+            <span className="text-[10px] font-mono text-zinc-500">{s.count}</span>
+          </div>
+          <p className="text-[11px] text-zinc-500 font-mono">{s.value}</p>
+          {company.leads.slice(0, 2).map((l: any) => (
+            <div key={l.name + s.stage} className="rounded-xl border border-zinc-100 p-3 hover:border-zinc-300">
+              <p className="text-xs font-medium truncate">{l.name}</p>
+              <p className="text-[10px] text-zinc-500 truncate mt-0.5">{l.camp}</p>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const quotationsData = [
+  { id: "Q-2048", client: "Nordic Ltd.", amount: "$28,400", status: "Approved", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", date: "Jul 02" },
+  { id: "Q-2049", client: "Harbor Group", amount: "$14,900", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", date: "Jul 03" },
+  { id: "Q-2050", client: "Peak Retail", amount: "$8,200", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", date: "Jul 04" },
+  { id: "Q-2051", client: "Meridian HQ", amount: "$42,650", status: "Awaiting Approval", tone: "bg-amber-50 text-amber-700 ring-amber-200", date: "Jul 05" },
+];
+
+function QuotationsView(_: any) {
+  return (
+    <Panel title="Quotations" subtitle="Approval workflow · convert to invoice on accept">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+              <th className="px-6 py-3">Quote ID</th>
+              <th className="px-6 py-3">Client</th>
+              <th className="px-6 py-3">Amount</th>
+              <th className="px-6 py-3">Date</th>
+              <th className="px-6 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-950/5">
+            {quotationsData.map((q) => (
+              <tr key={q.id} className="hover:bg-zinc-50/60">
+                <td className="px-6 py-3.5 text-xs font-mono">{q.id}</td>
+                <td className="px-6 py-3.5 text-sm font-medium">{q.client}</td>
+                <td className="px-6 py-3.5 text-sm font-mono">{q.amount}</td>
+                <td className="px-6 py-3.5 text-xs text-zinc-500">{q.date}</td>
+                <td className="px-6 py-3.5">
+                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${q.tone}`}>{q.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+const invoicesData = [
+  { id: "INV-2048", client: "Nordic Ltd.", amount: "$28,400", status: "Paid", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", due: "Jun 28" },
+  { id: "INV-2049", client: "Harbor Group", amount: "$14,900", status: "Overdue", tone: "bg-rose-50 text-rose-700 ring-rose-200", due: "Jun 30" },
+  { id: "INV-2050", client: "Peak Retail", amount: "$8,200", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", due: "Jul 12" },
+  { id: "INV-2051", client: "Meridian HQ", amount: "$42,650", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", due: "Jul 15" },
+];
+
+function InvoicingView(_: any) {
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { l: "Outstanding", v: "$684K", tone: "text-amber-600" },
+          { l: "Paid (MTD)", v: "$412K", tone: "text-emerald-600" },
+          { l: "Overdue", v: "$48K", tone: "text-rose-600" },
+        ].map((k) => (
+          <div key={k.l} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+            <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
+            <p className={`text-2xl font-bold tracking-tight mt-2 ${k.tone}`}>{k.v}</p>
+          </div>
+        ))}
+      </div>
+      <Panel title="Invoices" subtitle="Automated reminders on overdue">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+                <th className="px-6 py-3">Invoice</th>
+                <th className="px-6 py-3">Client</th>
+                <th className="px-6 py-3">Amount</th>
+                <th className="px-6 py-3">Due</th>
+                <th className="px-6 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-950/5">
+              {invoicesData.map((i) => (
+                <tr key={i.id} className="hover:bg-zinc-50/60">
+                  <td className="px-6 py-3.5 text-xs font-mono">{i.id}</td>
+                  <td className="px-6 py-3.5 text-sm font-medium">{i.client}</td>
+                  <td className="px-6 py-3.5 text-sm font-mono">{i.amount}</td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-500">{i.due}</td>
+                  <td className="px-6 py-3.5">
+                    <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${i.tone}`}>{i.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+function CustomerPortalView({ company }: any) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {company.leads.map((l: any) => (
+        <div key={l.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div className="flex items-center gap-3">
+            <div className={`size-11 rounded-full ${l.tone} grid place-items-center text-sm font-semibold ring-1 ring-black/5`}>{l.initials}</div>
+            <div>
+              <p className="text-sm font-semibold">{l.name}</p>
+              <p className="text-[11px] text-zinc-500">{l.email}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+            <div><p className="text-[10px] text-zinc-500">Invoices</p><p className="text-sm font-bold">4</p></div>
+            <div><p className="text-[10px] text-zinc-500">Tickets</p><p className="text-sm font-bold">1</p></div>
+            <div><p className="text-[10px] text-zinc-500">Docs</p><p className="text-sm font-bold">12</p></div>
+          </div>
+          <button className="w-full mt-4 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">
+            Open portal
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TasksView({ company }: any) {
+  const cols = ["Pending", "In Progress", "Blocked", "On Track"];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {cols.map((c) => (
+        <div key={c} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
+          <p className="text-xs font-semibold">{c}</p>
+          {company.tasks.filter((t: any) => t.status === c).map((t: any) => (
+            <div key={t.name} className="rounded-xl border border-zinc-100 p-3">
+              <p className="text-xs font-medium">{t.name}</p>
+              <p className="text-[10px] text-zinc-500 mt-1">{t.owner} · {t.due}</p>
+            </div>
+          ))}
+          {company.tasks.filter((t: any) => t.status === c).length === 0 && (
+            <p className="text-[11px] text-zinc-400 italic">No tasks</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const projectsData = [
+  { name: "Skyline Tower Launch", phase: "Execution", progress: 62, owner: "Real Estate" },
+  { name: "Term 3 Admissions", phase: "Planning", progress: 28, owner: "Education" },
+  { name: "Harbor HVAC Rollout", phase: "Execution", progress: 74, owner: "Facilities" },
+  { name: "Consolidated ERP Integration", phase: "Discovery", progress: 12, owner: "Group IT" },
+];
+
+function ProjectsView() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {projectsData.map((p) => (
+        <div key={p.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-semibold">{p.name}</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">{p.owner} · {p.phase}</p>
+            </div>
+            <span className="text-xs font-mono font-semibold">{p.progress}%</span>
+          </div>
+          <div className="h-2 bg-zinc-100 rounded-full mt-4 overflow-hidden">
+            <div className="h-full bg-zinc-900 rounded-full" style={{ width: `${p.progress}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const docsData = [
+  { name: "Master Services Agreement.pdf", size: "1.2 MB", updated: "2h ago" },
+  { name: "Q3 Board Deck.key", size: "18.4 MB", updated: "1d ago" },
+  { name: "Vendor SLA — Harbor.docx", size: "412 KB", updated: "3d ago" },
+  { name: "Fee Structure Term 3.xlsx", size: "228 KB", updated: "5d ago" },
+  { name: "Skyline Brochure v4.pdf", size: "6.8 MB", updated: "1w ago" },
+  { name: "Employee Handbook.pdf", size: "3.1 MB", updated: "2w ago" },
+];
+
+function DocumentsView() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {docsData.map((d) => (
+        <div key={d.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5 flex items-center gap-4">
+          <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
+            <FolderOpen className="size-4 text-zinc-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{d.name}</p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">{d.size} · {d.updated}</p>
+          </div>
+          <button className="size-7 grid place-items-center rounded-md hover:bg-zinc-100">
+            <MoreHorizontal className="size-4 text-zinc-400" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotificationsView({ company }: any) {
+  const all = [...company.activity, ...company.activity].map((n: any, i: number) => ({ ...n, i }));
+  return (
+    <Panel title="All Notifications" subtitle="Realtime · filtered to selected company">
+      <div className="divide-y divide-zinc-950/5">
+        {all.map((n: any, idx: number) => (
+          <div key={idx} className="px-6 py-4 flex items-start gap-3">
+            <div className={`mt-1.5 size-2 rounded-full shrink-0 ${n.tone}`} />
+            <div className="flex-1">
+              <p className="text-sm font-semibold">{n.title}</p>
+              <p className="text-xs text-zinc-500 mt-0.5">{n.body}</p>
+            </div>
+            <span className="text-[11px] text-zinc-400 font-mono">{n.time}</span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function AnalyticsView({ company }: any) {
+  return (
+    <>
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {company.kpis.map((k: any) => (
+          <div key={k.label} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+            <div className="flex items-start justify-between">
+              <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
+              <div className="size-8 rounded-lg bg-zinc-50 grid place-items-center">
+                <k.icon className="size-4 text-zinc-700" />
+              </div>
+            </div>
+            <div className="flex items-end justify-between mt-3">
+              <p className="text-2xl font-bold tracking-tight">{k.value}</p>
+              <span className={`text-xs font-semibold ${k.deltaTone}`}>{k.delta}</span>
+            </div>
+          </div>
+        ))}
+      </section>
+      <Panel title="12-Month Trend" subtitle={`Conversions · ${company.name}`}>
+        <div className="p-6">
+          <div className="flex items-end gap-2 h-56">
+            {company.chart.map((b: any, i: number) => (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                <div className={`w-full rounded-t-md ${b.active ? "bg-zinc-900" : "bg-zinc-200"}`} style={{ height: `${b.v * 100}%` }} />
+                <span className="mt-2 text-[10px] font-semibold text-zinc-400">{b.m}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+const rolesData = [
+  { role: "Super Admin", users: 2, scope: "All companies · full access" },
+  { role: "Company Admin", users: 4, scope: "One company · full access" },
+  { role: "Sales Manager", users: 8, scope: "CRM · Pipeline · Quotations" },
+  { role: "Finance", users: 3, scope: "Invoicing · Reports" },
+  { role: "Operations", users: 12, scope: "Tasks · Projects · Documents" },
+  { role: "Viewer", users: 22, scope: "Read-only dashboards" },
+];
+
+function RolesView() {
+  return (
+    <Panel title="Roles & Permissions" subtitle="Role-based access control · audit-logged">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+              <th className="px-6 py-3">Role</th>
+              <th className="px-6 py-3">Users</th>
+              <th className="px-6 py-3">Scope</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-950/5">
+            {rolesData.map((r) => (
+              <tr key={r.role} className="hover:bg-zinc-50/60">
+                <td className="px-6 py-3.5 text-sm font-semibold">{r.role}</td>
+                <td className="px-6 py-3.5 text-sm font-mono">{r.users}</td>
+                <td className="px-6 py-3.5 text-xs text-zinc-600">{r.scope}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+const automationsData = [
+  { name: "Auto-assign leads by source", trigger: "New lead", status: "Active" },
+  { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active" },
+  { name: "Escalate approvals > $10K", trigger: "Quotation submitted", status: "Active" },
+  { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused" },
+];
+
+function AutomationsView() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {automationsData.map((a) => (
+        <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center">
+                <Zap className="size-4 text-zinc-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{a.name}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
+              </div>
+            </div>
+            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${a.status === "Active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-zinc-100 text-zinc-600 ring-zinc-200"}`}>
+              {a.status}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SettingsView({ company }: any) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Panel title="Company Profile">
+        <div className="p-5 space-y-3 text-sm">
+          <div className="flex justify-between"><span className="text-zinc-500">Name</span><span className="font-medium">{company.name}</span></div>
+          <div className="flex justify-between"><span className="text-zinc-500">Segment</span><span className="font-medium">{company.kind}</span></div>
+          <div className="flex justify-between"><span className="text-zinc-500">Timezone</span><span className="font-medium">Asia/Dhaka</span></div>
+          <div className="flex justify-between"><span className="text-zinc-500">Currency</span><span className="font-medium">USD</span></div>
+        </div>
+      </Panel>
+      <Panel title="Security">
+        <ul className="p-5 space-y-2.5 text-xs text-zinc-600">
+          {["Role-based permissions enforced","Audit log active","Encrypted storage · backups verified","API keys rotated 4 days ago"].map((s) => (
+            <li key={s} className="flex items-center gap-2"><Check className="size-3.5 text-emerald-600" /><span>{s}</span></li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function IndustryView({ view, company }: any) {
+  const match = company.industry.find((m: any) => m.label === view);
+  return (
+    <Panel title={view} subtitle={match?.meta ?? `Industry module · ${company.name}`}>
+      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {company.industry.map((m: any) => (
+          <div key={m.label} className="rounded-xl border border-zinc-100 p-4">
+            <div className="size-9 rounded-lg bg-zinc-100 grid place-items-center mb-3">
+              <m.icon className="size-4 text-zinc-700" />
+            </div>
+            <p className="text-sm font-semibold">{m.label}</p>
+            <p className="text-[11px] text-zinc-500 mt-1">{m.meta}</p>
+          </div>
+        ))}
+      </div>
+    </Panel>
   );
 }
