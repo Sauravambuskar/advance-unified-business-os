@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { ProgressiveFluxLoader } from "@/components/ui/progressive-flux-loader";
 import {
   LayoutDashboard,
   Inbox,
@@ -327,7 +328,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
           <SectionLabel>Core Modules</SectionLabel>
           {coreNav.map((item) => (
             <NavItem
@@ -471,7 +472,7 @@ function Dashboard() {
         </header>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-6 lg:p-8 space-y-6">
             {activeView !== "Executive Dashboard" && (
               <ModuleView view={activeView} company={company} />
@@ -508,6 +509,35 @@ function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Live sync indicator — progressive flux loader (theme-neutral multicolor) */}
+            <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm px-5 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                    Live sync · {company.name}
+                  </p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Streaming CRM, invoices, and operations data across all firms
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Connected
+                </span>
+              </div>
+              <ProgressiveFluxLoader
+                duration={10}
+                phases={[
+                  { at: 0, label: "connecting" },
+                  { at: 30, label: "syncing leads" },
+                  { at: 60, label: "reconciling invoices" },
+                  { at: 85, label: "updating dashboards" },
+                  { at: 100, label: "up to date" },
+                ]}
+              />
+            </section>
+
 
             {/* KPI cards */}
             <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
