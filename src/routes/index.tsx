@@ -621,7 +621,7 @@ function Dashboard() {
                             <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                             <td className="px-6 py-3.5">
                               <span
-                                className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${l.stageTone}`}
+                                className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${l.stageTone}`}
                               >
                                 {l.stage}
                               </span>
@@ -730,7 +730,7 @@ function Dashboard() {
                         <div className="h-20 relative">
                           <img src={coverFor(l.camp || l.name)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />
-                          <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                          <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500 text-white">
                             Won
                           </span>
                         </div>
@@ -812,7 +812,7 @@ function Dashboard() {
                           </p>
                         </div>
                         <span
-                          className={`text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${t.statusTone}`}
+                          className={`text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${t.statusTone}`}
                         >
                           {t.status}
                         </span>
@@ -981,7 +981,7 @@ function NavItem({
 
       <span className="flex-1 text-left truncate">{label}</span>
       {badge && (
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700">
           {badge}
         </span>
       )}
@@ -1117,7 +1117,7 @@ function CRMView({ company }: any) {
                 <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                 <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${l.stageTone}`}>{l.stage}</span>
+                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${l.stageTone}`}>{l.stage}</span>
                 </td>
               </tr>
             ))}
@@ -1322,7 +1322,7 @@ function LeadDetail({ lead, onUpdate, onBack }: {
             <p className="text-xs text-zinc-500">{lead.title} · {lead.company}</p>
           </div>
           <div className="pb-1">
-            <span className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full ring-1 bg-amber-50 text-amber-700 ring-amber-200">
+            <span className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-md ring-1 bg-amber-50 text-amber-700 ring-amber-200">
               {lead.status}
             </span>
           </div>
@@ -1578,7 +1578,7 @@ function LeadsView({ company }: any) {
                   <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-600">{l.source}</td>
                   <td className="px-6 py-3.5">
-                    <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 bg-amber-50 text-amber-700 ring-amber-200">{l.status}</span>
+                    <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 bg-amber-50 text-amber-700 ring-amber-200">{l.status}</span>
                   </td>
                 </tr>
               ))}
@@ -1644,7 +1644,7 @@ function QuotationsView(_: any) {
                 <td className="px-6 py-3.5 text-sm font-mono">{q.amount}</td>
                 <td className="px-6 py-3.5 text-xs text-zinc-500">{q.date}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${q.tone}`}>{q.status}</span>
+                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${q.tone}`}>{q.status}</span>
                 </td>
               </tr>
             ))}
@@ -1697,7 +1697,7 @@ function InvoicingView(_: any) {
                   <td className="px-6 py-3.5 text-sm font-mono">{i.amount}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-500">{i.due}</td>
                   <td className="px-6 py-3.5">
-                    <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${i.tone}`}>{i.status}</span>
+                    <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${i.tone}`}>{i.status}</span>
                   </td>
                 </tr>
               ))}
@@ -1928,7 +1928,7 @@ function AutomationsView() {
                 <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
               </div>
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${a.status === "Active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-zinc-100 text-zinc-600 ring-zinc-200"}`}>
+            <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${a.status === "Active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-zinc-100 text-zinc-600 ring-zinc-200"}`}>
               {a.status}
             </span>
           </div>
