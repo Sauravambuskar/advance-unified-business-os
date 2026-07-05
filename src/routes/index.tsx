@@ -590,11 +590,11 @@ function Dashboard() {
                           <tr key={l.name + l.camp} className="hover:bg-zinc-50/60 transition-colors">
                             <td className="px-6 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-black/5 shrink-0`}
-                                >
-                                  {l.initials}
-                                </div>
+                                <img
+                                  src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`}
+                                  alt={l.name}
+                                  className="size-9 rounded-full object-cover ring-1 ring-black/5 shrink-0"
+                                />
                                 <div>
                                   <p className="text-sm font-medium">{l.name}</p>
                                   <p className="text-[11px] text-zinc-500">{l.time}</p>
