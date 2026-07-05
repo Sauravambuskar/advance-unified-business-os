@@ -478,26 +478,34 @@ function Dashboard() {
             )}
             {activeView === "Executive Dashboard" && (<>
 
-            {/* Greeting + context */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                  {company.kind}
-                </p>
-                <h1 className="text-2xl font-bold tracking-tight mt-1">
-                  Good evening, Sohan — {company.name}
-                </h1>
-                <p className="text-sm text-zinc-500 mt-1">
-                  Executive overview · role-based access · audit-logged
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
-                  <Download className="size-3.5" /> Export report
-                </button>
-                <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
-                  <Zap className="size-3.5" /> New automation
-                </button>
+            {/* Company hero banner */}
+            <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+              <img
+                src={COMPANY_HERO[companyKey]}
+                alt={company.name}
+                className="w-full h-44 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/85 via-zinc-950/55 to-transparent" />
+              <div className="absolute inset-0 flex flex-wrap items-end justify-between gap-4 p-6">
+                <div className="text-white max-w-2xl">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
+                    {company.kind}
+                  </p>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight mt-1 drop-shadow">
+                    Good evening, Sohan — {company.name}
+                  </h1>
+                  <p className="text-sm text-white/80 mt-1">
+                    Executive overview · role-based access · audit-logged
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-white/30 bg-white/10 backdrop-blur text-white hover:bg-white/20">
+                    <Download className="size-3.5" /> Export report
+                  </button>
+                  <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-white text-zinc-900 hover:bg-white/90">
+                    <Zap className="size-3.5" /> New automation
+                  </button>
+                </div>
               </div>
             </div>
 
