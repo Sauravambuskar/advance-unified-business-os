@@ -2065,27 +2065,54 @@ function CustomerPortalView({ company }: any) {
   );
 }
 
-function TasksView({ company }: any) {
-  const cols = ["Pending", "In Progress", "Blocked", "On Track"];
+function TasksView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const cols: TaskStatus[] = ["Pending", "In Progress", "On Track", "Blocked"];
+  const onDrop = (status: TaskStatus) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const name = e.dataTransfer.getData("text/plain");
+    if (name) store.setTaskStatus(companyKey, name, status);
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {cols.map((c) => (
-        <div key={c} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold">{c}</p>
+        <div
+          key={c}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDrop(c)}
+          className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3 min-h-40"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold">{c}</p>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ring-1 ${TASK_TONE[c]}`}>
+              {company.tasks.filter((t: any) => t.status === c).length}
+            </span>
+          </div>
           {company.tasks.filter((t: any) => t.status === c).map((t: any) => (
-            <div key={t.name} className="rounded-xl border border-zinc-100 p-3">
+            <div
+              key={t.name}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData("text/plain", t.name)}
+              onClick={() => {
+                const idx = cols.indexOf(c);
+                store.setTaskStatus(companyKey, t.name, cols[(idx + 1) % cols.length]);
+              }}
+              className="rounded-xl border border-zinc-100 p-3 cursor-grab active:cursor-grabbing hover:border-zinc-300"
+              title="Drag to another column or click to advance"
+            >
               <p className="text-xs font-medium">{t.name}</p>
               <p className="text-[10px] text-zinc-500 mt-1">{t.owner} · {t.due}</p>
             </div>
           ))}
           {company.tasks.filter((t: any) => t.status === c).length === 0 && (
-            <p className="text-[11px] text-zinc-400 italic">No tasks</p>
+            <p className="text-[11px] text-zinc-400 italic">Drop tasks here</p>
           )}
         </div>
       ))}
     </div>
   );
 }
+
 
 const projectsData = [
   { name: "Skyline Tower Launch", phase: "Execution", progress: 62, owner: "Real Estate" },
