@@ -165,7 +165,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
       settings,
       updateSettings: (k, patch) =>
-        setSettings((prev) => ({ ...prev, [k]: { timezone: "Asia/Kolkata", currency: "INR", ...(prev[k] ?? {}), ...patch } })),
+        setSettings((prev) => {
+          const base: CompanySettings = { timezone: "Asia/Kolkata", currency: "INR" };
+          return { ...prev, [k]: { ...base, ...(prev[k] ?? {}), ...patch } };
+        }),
 
       unreadCount,
       bumpUnread: (n = 1) => setUnreadCount((c) => c + n),
