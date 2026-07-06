@@ -2263,59 +2263,105 @@ function RolesView() {
   );
 }
 
-const automationsData = [
-  { name: "Auto-assign leads by source", trigger: "New lead", status: "Active" },
-  { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active" },
-  { name: "Escalate approvals > ₹8.3 L", trigger: "Quotation submitted", status: "Active" },
-  { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused" },
-];
-
 function AutomationsView() {
+  const store = useAppStore();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {automationsData.map((a) => (
-        <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center">
-                <Zap className="size-4 text-zinc-700" />
+      {store.automations.map((a) => {
+        const active = a.status === "Active";
+        return (
+          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
+                  <Zap className="size-4 text-zinc-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{a.name}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold">{a.name}</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
-              </div>
+              <button
+                onClick={() => {
+                  store.toggleAutomation(a.name);
+                  toast.success(active ? "Paused" : "Activated");
+                }}
+                role="switch"
+                aria-checked={active}
+                className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${active ? "bg-[#34A853]" : "bg-zinc-300"}`}
+                title={active ? "Pause" : "Activate"}
+              >
+                <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${active ? "left-[22px]" : "left-0.5"}`} />
+              </button>
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${a.status === "Active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-zinc-100 text-zinc-600 ring-zinc-200"}`}>
+            <p className={`mt-3 text-[10px] font-semibold ${active ? "text-emerald-600" : "text-zinc-500"}`}>
               {a.status}
-            </span>
+            </p>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function SettingsView({ company }: any) {
+function SettingsView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const s = store.settings[companyKey] ?? { timezone: "Asia/Kolkata", currency: "INR" };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Panel title="Company Profile">
+      <Panel title="Company Profile" subtitle="Editable · saved locally to this session">
         <div className="p-5 space-y-3 text-sm">
-          <div className="flex justify-between"><span className="text-zinc-500">Name</span><span className="font-medium">{company.name}</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Segment</span><span className="font-medium">{company.kind}</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Timezone</span><span className="font-medium">Asia/Dhaka</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Currency</span><span className="font-medium">INR</span></div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Name</span>
+            <span className="font-medium">{company.name}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Segment</span>
+            <span className="font-medium">{company.kind}</span>
+          </div>
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Timezone</span>
+            <select
+              value={s.timezone}
+              onChange={(e) => store.updateSettings(companyKey, { timezone: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            >
+              {["Asia/Kolkata", "Asia/Dhaka", "Asia/Dubai", "Europe/London", "America/New_York"].map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Currency</span>
+            <select
+              value={s.currency}
+              onChange={(e) => store.updateSettings(companyKey, { currency: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            >
+              {["INR", "USD", "EUR", "GBP", "AED"].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={() => toast.success("Settings saved")}
+            className="w-full mt-2 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
+          >
+            Save changes
+          </button>
         </div>
       </Panel>
       <Panel title="Security">
         <ul className="p-5 space-y-2.5 text-xs text-zinc-600">
-          {["Role-based permissions enforced","Audit log active","Encrypted storage · backups verified","API keys rotated 4 days ago"].map((s) => (
-            <li key={s} className="flex items-center gap-2"><Check className="size-3.5 text-emerald-600" /><span>{s}</span></li>
+          {["Role-based permissions enforced","Audit log active","Encrypted storage · backups verified","API keys rotated 4 days ago"].map((line) => (
+            <li key={line} className="flex items-center gap-2"><Check className="size-3.5 text-emerald-600" /><span>{line}</span></li>
           ))}
         </ul>
       </Panel>
     </div>
   );
 }
+
 
 function IndustryView({ view, company }: any) {
   const match = company.industry.find((m: any) => m.label === view);
