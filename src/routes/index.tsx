@@ -49,8 +49,17 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: Dashboard,
+  component: DashboardWrapper,
 });
+
+function DashboardWrapper() {
+  return (
+    <AppStoreProvider>
+      <Dashboard />
+    </AppStoreProvider>
+  );
+}
+
 
 // ------------------------------------------------------------------
 // Companies (multi-company management). Switching this drives all data.
