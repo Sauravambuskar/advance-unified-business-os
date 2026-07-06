@@ -535,7 +535,7 @@ function Dashboard() {
             {switcherOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setSwitcherOpen(false)} />
-                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-2 z-20">
+                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl ring-1 ring-zinc-200 p-2 z-20">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 px-3 py-2">
                     Switch Company
                   </p>
@@ -566,7 +566,7 @@ function Dashboard() {
                       </button>
                     );
                   })}
-                  <div className="border-t border-zinc-100 mt-1 pt-1">
+                  <div className="border-t border-zinc-200 mt-1 pt-1">
                     <button className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-zinc-50 text-left text-sm">
                       <div className="size-9 rounded-md bg-zinc-100 grid place-items-center shrink-0">
                         <Plus className="size-4 text-zinc-600" />
@@ -617,8 +617,8 @@ function Dashboard() {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 z-20 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl ring-1 ring-zinc-200 z-20 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
                       <p className="text-sm font-semibold">Notifications</p>
                       <button
                         onClick={() => store.markAllRead()}
@@ -644,7 +644,7 @@ function Dashboard() {
                         setNotifOpen(false);
                         setActiveView("Notifications");
                       }}
-                      className="w-full py-2.5 text-xs font-semibold border-t border-zinc-100 hover:bg-zinc-50"
+                      className="w-full py-2.5 text-xs font-semibold border-t border-zinc-200 hover:bg-zinc-50"
                     >
                       View all
                     </button>
@@ -671,7 +671,7 @@ function Dashboard() {
             {activeView === "Executive Dashboard" && (<>
 
             {/* Company hero banner */}
-            <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm bg-white">
+            <div className="relative rounded-2xl overflow-hidden ring-1 ring-zinc-200 shadow-sm bg-white">
               <div className="relative h-24 sm:h-28">
                 <img
                   src={COMPANY_HERO[companyKey]}
@@ -717,7 +717,7 @@ function Dashboard() {
               {company.kpis.map((k) => (
                 <div
                   key={k.label}
-                  className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5"
+                  className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5"
                 >
                   <div className="flex items-start justify-between">
                     <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
@@ -738,7 +738,7 @@ function Dashboard() {
               {/* Left */}
               <div className="col-span-12 xl:col-span-8 space-y-6">
                 {/* Sales Pipeline */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Sales Pipeline</h3>
@@ -754,7 +754,7 @@ function Dashboard() {
                     {company.pipeline.map((s, i) => (
                       <div
                         key={s.stage}
-                        className="rounded-xl border border-zinc-100 p-3 hover:border-zinc-300 transition-colors"
+                        className="rounded-xl border border-zinc-200 p-3 hover:border-zinc-300 transition-colors"
                       >
                         <div className="flex items-center gap-2">
                           <span
@@ -772,7 +772,7 @@ function Dashboard() {
                 </section>
 
                 {/* Lead Preview */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm overflow-hidden">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Lead Management</h3>
@@ -804,7 +804,7 @@ function Dashboard() {
                                 <img
                                   src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`}
                                   alt={l.name}
-                                  className="size-9 rounded-full object-cover ring-1 ring-black/5 shrink-0"
+                                  className="size-9 rounded-full object-cover ring-1 ring-zinc-200 shrink-0"
                                 />
                                 <div>
                                   <p className="text-sm font-medium">{l.name}</p>
@@ -840,7 +840,7 @@ function Dashboard() {
                 </section>
 
                 {/* Chart */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-semibold">Business Performance</h3>
@@ -910,7 +910,7 @@ function Dashboard() {
                 </section>
 
                 {/* Recent Won Deals — customer photos */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Recent Won Deals</h3>
@@ -924,7 +924,7 @@ function Dashboard() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {company.leads.slice(0, 3).map((l, i) => (
-                      <div key={l.name} className="rounded-xl overflow-hidden ring-1 ring-black/5 hover:shadow-md transition-shadow">
+                      <div key={l.name} className="rounded-xl overflow-hidden ring-1 ring-zinc-200 hover:shadow-md transition-shadow">
                         <div className="h-20 relative">
                           <img src={coverFor(l.camp || l.name)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent" />
@@ -953,7 +953,7 @@ function Dashboard() {
                 </section>
 
                 {/* Lead Sources */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Lead Sources</h3>
@@ -987,7 +987,7 @@ function Dashboard() {
                 </section>
 
 
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
                   <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Tasks & Approvals</h3>
@@ -1023,7 +1023,7 @@ function Dashboard() {
               {/* Right rail */}
               <div className="col-span-12 xl:col-span-4 space-y-6">
                 {/* Top Performers — with real photos */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
                   <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Top Sales Reps</h3>
@@ -1043,7 +1043,7 @@ function Dashboard() {
                           <img
                             src={`https://i.pravatar.cc/120?u=${encodeURIComponent(p.name)}`}
                             alt={p.name}
-                            className="size-10 rounded-full object-cover ring-1 ring-black/5"
+                            className="size-10 rounded-full object-cover ring-1 ring-zinc-200"
                           />
                           <span className="absolute -bottom-1 -right-1 size-5 rounded-full bg-zinc-900 text-white text-[10px] font-bold grid place-items-center ring-2 ring-white">
                             {i + 1}
@@ -1060,7 +1060,7 @@ function Dashboard() {
                 </section>
 
                 {/* Industry modules */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
                   <div className="px-5 py-4 border-b border-zinc-950/5">
                     <h3 className="text-sm font-semibold">Industry Modules</h3>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
@@ -1087,7 +1087,7 @@ function Dashboard() {
                 </section>
 
                 {/* Activity / Notifications */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
                   <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
                     <h3 className="text-sm font-semibold">Notifications & Activity</h3>
                     <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1">
@@ -1115,7 +1115,7 @@ function Dashboard() {
                 </section>
 
                 {/* Security */}
-                <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <ShieldCheck className="size-4 text-emerald-600" />
                     <h3 className="text-sm font-semibold">Security & Access</h3>
@@ -1355,7 +1355,7 @@ function renderModuleBody(view: string, company: any, companyKey: string) {
 
 function Panel({ title, subtitle, children }: any) {
   return (
-    <section className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm">
+    <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
       {(title || subtitle) && (
         <div className="px-6 py-4 border-b border-zinc-950/5">
           {title && <h3 className="text-sm font-semibold">{title}</h3>}
@@ -1386,7 +1386,7 @@ function CRMView({ company }: any) {
               <tr key={l.name} className="hover:bg-zinc-50/60">
                 <td className="px-6 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-black/5`}>{l.initials}</div>
+                    <div className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-zinc-200`}>{l.initials}</div>
                     <p className="text-sm font-medium">{l.name}</p>
                   </div>
                 </td>
@@ -1517,7 +1517,7 @@ function Field({ label, value, onChange, type = "text", multiline = false }: {
 }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div className="group grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-100 hover:bg-zinc-50/50 px-2 -mx-2 rounded">
+    <div className="group grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-200 hover:bg-zinc-50/50 px-2 -mx-2 rounded">
       <label className="text-xs font-medium text-zinc-500 pt-1">{label}</label>
       {editing ? (
         multiline ? (
@@ -1644,7 +1644,7 @@ function LeadDetail({ lead, onUpdate, onBack }: {
                 <Field label="Lead Source" value={lead.source} onChange={set("source")} />
                 <Field label="Industry" value={lead.industry} onChange={set("industry")} />
                 <Field label="Annual Revenue" value={lead.revenue} onChange={set("revenue")} />
-                <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-100 px-2 -mx-2">
+                <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-200 px-2 -mx-2">
                   <label className="text-xs font-medium text-zinc-500 pt-1">Email Opt Out</label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={lead.emailOptOut} onChange={(e) => onUpdate({ emailOptOut: e.target.checked })} className="rounded" />
@@ -1819,7 +1819,7 @@ function LeadsView({ company }: any) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {["New", "Qualified", "Proposal", "Won"].map((s, i) => (
-          <div key={s} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div key={s} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
             <p className="text-xs text-zinc-500 font-medium">{s}</p>
             <p className="text-2xl font-bold tracking-tight mt-2">{[128, 46, 22, 18][i]}</p>
             <p className="text-[11px] text-emerald-600 font-semibold mt-1">Auto-assigned</p>
@@ -1844,7 +1844,7 @@ function LeadsView({ company }: any) {
                 <tr key={l.id} onClick={() => setSelectedId(l.id)} className="hover:bg-zinc-50/80 cursor-pointer">
                   <td className="px-6 py-3.5">
                     <div className="flex items-center gap-3">
-                      <img src={l.avatar} alt={l.name} className="size-9 rounded-full ring-1 ring-black/5 bg-white object-cover" />
+                      <img src={l.avatar} alt={l.name} className="size-9 rounded-full ring-1 ring-zinc-200 bg-white object-cover" />
                       <div>
                         <p className="text-sm font-medium">{l.name}</p>
                         <p className="text-[11px] text-zinc-500">{l.title}</p>
@@ -1872,7 +1872,7 @@ function PipelineView({ company }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
       {company.pipeline.map((s: any, i: number) => (
-        <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
+        <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={`size-1.5 rounded-full ${["bg-[#4285F4]","bg-[#FBBC05]","bg-[#FBBC05]","bg-[#EA4335]","bg-[#34A853]"][i]}`} />
@@ -1882,7 +1882,7 @@ function PipelineView({ company }: any) {
           </div>
           <p className="text-[11px] text-zinc-500 font-mono">{s.value}</p>
           {company.leads.slice(0, 2).map((l: any) => (
-            <div key={l.name + s.stage} className="rounded-xl border border-zinc-100 p-3 hover:border-zinc-300">
+            <div key={l.name + s.stage} className="rounded-xl border border-zinc-200 p-3 hover:border-zinc-300">
               <p className="text-xs font-medium truncate">{l.name}</p>
               <p className="text-[10px] text-zinc-500 truncate mt-0.5">{l.camp}</p>
             </div>
@@ -1965,7 +1965,7 @@ function InvoicingView() {
           { l: "Paid (MTD)", v: formatAmount(totals.paid), tone: "text-emerald-600" },
           { l: "Overdue", v: formatAmount(totals.overdue), tone: "text-rose-600" },
         ].map((k) => (
-          <div key={k.l} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div key={k.l} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
             <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
             <p className={`text-2xl font-bold tracking-tight mt-2 ${k.tone}`}>{k.v}</p>
           </div>
@@ -2044,9 +2044,9 @@ function CustomerPortalView({ company }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {company.leads.map((l: any) => (
-        <div key={l.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+        <div key={l.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
           <div className="flex items-center gap-3">
-            <div className={`size-11 rounded-full ${l.tone} grid place-items-center text-sm font-semibold ring-1 ring-black/5`}>{l.initials}</div>
+            <div className={`size-11 rounded-full ${l.tone} grid place-items-center text-sm font-semibold ring-1 ring-zinc-200`}>{l.initials}</div>
             <div>
               <p className="text-sm font-semibold">{l.name}</p>
               <p className="text-[11px] text-zinc-500">{l.email}</p>
@@ -2081,7 +2081,7 @@ function TasksView({ company, companyKey }: any) {
           key={c}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop(c)}
-          className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3 min-h-40"
+          className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 space-y-3 min-h-40"
         >
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold">{c}</p>
@@ -2098,7 +2098,7 @@ function TasksView({ company, companyKey }: any) {
                 const idx = cols.indexOf(c);
                 store.setTaskStatus(companyKey, t.name, cols[(idx + 1) % cols.length]);
               }}
-              className="rounded-xl border border-zinc-100 p-3 cursor-grab active:cursor-grabbing hover:border-zinc-300"
+              className="rounded-xl border border-zinc-200 p-3 cursor-grab active:cursor-grabbing hover:border-zinc-300"
               title="Drag to another column or click to advance"
             >
               <p className="text-xs font-medium">{t.name}</p>
@@ -2126,7 +2126,7 @@ function ProjectsView() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {projectsData.map((p) => (
-        <div key={p.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+        <div key={p.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-sm font-semibold">{p.name}</p>
@@ -2156,7 +2156,7 @@ function DocumentsView() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {docsData.map((d) => (
-        <div key={d.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5 flex items-center gap-4">
+        <div key={d.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5 flex items-center gap-4">
           <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
             <FolderOpen className="size-4 text-zinc-700" />
           </div>
@@ -2198,7 +2198,7 @@ function AnalyticsView({ company }: any) {
     <>
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {company.kpis.map((k: any) => (
-          <div key={k.label} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div key={k.label} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
             <div className="flex items-start justify-between">
               <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
               <div className="size-8 rounded-lg bg-zinc-50 grid place-items-center">
@@ -2271,7 +2271,7 @@ function AutomationsView() {
       {store.automations.map((a) => {
         const active = a.status === "Active";
         return (
-          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0">
                 <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
@@ -2370,7 +2370,7 @@ function IndustryView({ view, company }: any) {
     <Panel title={view} subtitle={match?.meta ?? `Industry module · ${company.name}`}>
       <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         {company.industry.map((m: any) => (
-          <div key={m.label} className="rounded-xl border border-zinc-100 p-4">
+          <div key={m.label} className="rounded-xl border border-zinc-200 p-4">
             <div className="size-9 rounded-lg bg-zinc-100 grid place-items-center mb-3">
               <m.icon className="size-4 text-zinc-700" />
             </div>
