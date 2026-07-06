@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AskAiPanel } from "@/components/ask-ai-panel";
+import { AskAi } from "@/components/ask-ai-panel";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 import {
   LayoutDashboard,
@@ -32,6 +33,7 @@ import {
   Activity,
   DollarSign,
   Clock,
+  Menu,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -306,6 +308,7 @@ function Dashboard() {
   const [companyKey, setCompanyKey] = useState<CompanyKey>("group");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [activeView, setActiveView] = useState<string>("Executive Dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const company = companies[companyKey];
 
   const industry = industryNav[companyKey];
@@ -315,94 +318,142 @@ function Dashboard() {
     [company],
   );
 
+  const sidebarContent = (
+    <>
+      <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-950/5 shrink-0">
+        <div className="size-8 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white text-xs font-bold">
+          AB
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold tracking-tight leading-none">Advance Suite</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Business OS</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
+        <SectionLabel>Core Modules</SectionLabel>
+        {coreNav.map((item) => (
+          <NavItem
+            key={item.label}
+            {...item}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+
+        <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
+        {industry.map((item) => (
+          <NavItem
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+
+        <SectionLabel>System</SectionLabel>
+        {systemNav.map((item) => (
+          <NavItem
+            key={item.label}
+            {...item}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+      </nav>
+
+      <div className="p-3 border-t border-zinc-950/5 shrink-0">
+        <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors">
+          <div className="size-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 grid place-items-center text-white text-[11px] font-semibold shrink-0">
+            ST
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-xs font-semibold truncate">Sohan Talukder</p>
+            <p className="text-[10px] text-zinc-500">Super Admin</p>
+          </div>
+          <MoreHorizontal className="size-4 text-zinc-400 shrink-0" />
+        </button>
+      </div>
+    </>
+  );
+
+  const snapshot = {
+    companyName: company.name,
+    companyKind: company.kind,
+    view: activeView,
+    kpis: company.kpis.map((k) => ({ label: k.label, value: k.value, delta: k.delta })),
+    leads: company.leads.map((l) => ({
+      name: l.name,
+      time: l.time,
+      stage: l.stage,
+      message: l.message,
+      phone: l.phone,
+      email: l.email,
+    })),
+    pipeline: company.pipeline.map((p) => ({ stage: p.stage, count: p.count, value: p.value })),
+    tasks: company.tasks.map((t) => ({ name: t.name, owner: t.owner, due: t.due, status: t.status })),
+    activity: company.activity.map((a) => ({ title: a.title, body: a.body, time: a.time })),
+  };
+
   return (
     <div className="flex h-screen bg-[#f9f9f8] text-zinc-900 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 flex flex-col border-r border-zinc-950/5 bg-white">
-        <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-950/5">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white text-xs font-bold">
-            AB
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold tracking-tight leading-none">Advance Suite</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Business OS</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
-          <SectionLabel>Core Modules</SectionLabel>
-          {coreNav.map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-          <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
-          {industry.map((item) => (
-            <NavItem
-              key={item.label}
-              icon={item.icon}
-              label={item.label}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-          <SectionLabel>System</SectionLabel>
-          {systemNav.map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-        </nav>
-
-        <div className="p-3 border-t border-zinc-950/5">
-          <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors">
-            <div className="size-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 grid place-items-center text-white text-[11px] font-semibold shrink-0">
-              ST
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-xs font-semibold truncate">Sohan Talukder</p>
-              <p className="text-[10px] text-zinc-500">Super Admin</p>
-            </div>
-            <MoreHorizontal className="size-4 text-zinc-400 shrink-0" />
-          </button>
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="w-64 shrink-0 hidden lg:flex flex-col border-r border-zinc-950/5 bg-white">
+        {sidebarContent}
       </aside>
+
+      {/* Mobile Sidebar (Sheet) */}
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="p-0 w-72 flex flex-col bg-white">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 shrink-0 border-b border-zinc-950/5 bg-white/70 backdrop-blur flex items-center justify-between px-6 gap-4 relative z-30">
+        <header className="h-16 shrink-0 border-b border-zinc-950/5 bg-white/70 backdrop-blur flex items-center justify-between px-3 sm:px-6 gap-2 sm:gap-4 relative z-30">
+          {/* Mobile menu */}
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="lg:hidden size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50 shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="size-4 text-zinc-700" />
+          </button>
+
           {/* Company switcher */}
-          <div className="relative">
+          <div className="relative min-w-0 shrink">
             <button
               onClick={() => setSwitcherOpen((v) => !v)}
-              className="flex items-center gap-3 pl-1.5 pr-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors"
+              className="flex items-center gap-2 sm:gap-3 pl-1.5 pr-2 sm:pr-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors max-w-full"
             >
               <div
                 className={`size-8 rounded-md bg-gradient-to-br ${company.tone} grid place-items-center text-white text-[11px] font-bold shrink-0`}
               >
                 {company.initials}
               </div>
-              <div className="text-left min-w-0">
-                <p className="text-sm font-semibold leading-none">{company.name}</p>
-                <p className="text-[10px] text-zinc-500 mt-1">{company.kind}</p>
+              <div className="text-left min-w-0 hidden sm:block">
+                <p className="text-sm font-semibold leading-none truncate">{company.name}</p>
+                <p className="text-[10px] text-zinc-500 mt-1 truncate">{company.kind}</p>
               </div>
-              <ChevronDown className="size-4 text-zinc-400 ml-1" />
+              <ChevronDown className="size-4 text-zinc-400 ml-1 shrink-0" />
             </button>
 
             {switcherOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setSwitcherOpen(false)} />
-                <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-2 z-20">
+                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-2 z-20">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 px-3 py-2">
                     Switch Company
                   </p>
@@ -458,47 +509,24 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button className="hidden sm:flex items-center gap-1.5 text-sm text-zinc-600 font-medium px-3 py-2 rounded-lg hover:bg-zinc-50">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <AskAi snapshot={snapshot} />
+            <button className="hidden lg:flex items-center gap-1.5 text-sm text-zinc-600 font-medium px-3 py-2 rounded-lg hover:bg-zinc-50">
               English <ChevronDown className="size-3.5" />
             </button>
-            <button className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50">
+            <button className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50 shrink-0">
               <Bell className="size-4 text-zinc-700" />
               <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-[#EA4335]" />
             </button>
-            <button className="flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors">
-              <Plus className="size-4" /> Add person
+            <button className="hidden sm:flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors shrink-0">
+              <Plus className="size-4" /> <span className="hidden md:inline">Add person</span>
             </button>
           </div>
         </header>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="p-6 lg:p-8 space-y-6">
-            <AskAiPanel
-              snapshot={{
-                companyName: company.name,
-                companyKind: company.kind,
-                view: activeView,
-                kpis: company.kpis.map((k) => ({ label: k.label, value: k.value, delta: k.delta })),
-                leads: company.leads.map((l) => ({
-                  name: l.name,
-                  time: l.time,
-                  stage: l.stage,
-                  message: l.message,
-                  phone: l.phone,
-                  email: l.email,
-                })),
-                pipeline: company.pipeline.map((p) => ({ stage: p.stage, count: p.count, value: p.value })),
-                tasks: company.tasks.map((t) => ({
-                  name: t.name,
-                  owner: t.owner,
-                  due: t.due,
-                  status: t.status,
-                })),
-                activity: company.activity.map((a) => ({ title: a.title, body: a.body, time: a.time })),
-              }}
-            />
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {activeView !== "Executive Dashboard" && (
               <ModuleView view={activeView} company={company} />
             )}
