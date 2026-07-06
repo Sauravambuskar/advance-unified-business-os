@@ -797,7 +797,7 @@ function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-950/5">
-                        {company.leads.map((l) => (
+                        {filteredLeads.map((l: any) => (
                           <tr key={l.name + l.camp} className="hover:bg-zinc-50/60 transition-colors">
                             <td className="px-6 py-3.5">
                               <div className="flex items-center gap-3">
