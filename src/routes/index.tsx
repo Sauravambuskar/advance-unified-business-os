@@ -475,7 +475,30 @@ function Dashboard() {
         {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-6 lg:p-8 space-y-6">
-            <AskAiPanel contextLabel={`Company: ${company.name} (${company.kind}). View: ${activeView}.`} />
+            <AskAiPanel
+              snapshot={{
+                companyName: company.name,
+                companyKind: company.kind,
+                view: activeView,
+                kpis: company.kpis.map((k) => ({ label: k.label, value: k.value, delta: k.delta })),
+                leads: company.leads.map((l) => ({
+                  name: l.name,
+                  time: l.time,
+                  stage: l.stage,
+                  message: l.message,
+                  phone: l.phone,
+                  email: l.email,
+                })),
+                pipeline: company.pipeline.map((p) => ({ stage: p.stage, count: p.count, value: p.value })),
+                tasks: company.tasks.map((t) => ({
+                  name: t.name,
+                  owner: t.owner,
+                  due: t.due,
+                  status: t.status,
+                })),
+                activity: company.activity.map((a) => ({ title: a.title, body: a.body, time: a.time })),
+              }}
+            />
             {activeView !== "Executive Dashboard" && (
               <ModuleView view={activeView} company={company} />
             )}
