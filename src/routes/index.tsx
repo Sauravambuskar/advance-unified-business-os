@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { AskAiPanel } from "@/components/ask-ai-panel";
 
 import {
   LayoutDashboard,
@@ -474,6 +475,7 @@ function Dashboard() {
         {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-6 lg:p-8 space-y-6">
+            <AskAiPanel contextLabel={`Company: ${company.name} (${company.kind}). View: ${activeView}.`} />
             {activeView !== "Executive Dashboard" && (
               <ModuleView view={activeView} company={company} />
             )}
