@@ -330,14 +330,75 @@ function Dashboard() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [activeView, setActiveView] = useState<string>("Executive Dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const company = companies[companyKey];
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [addLeadOpen, setAddLeadOpen] = useState(false);
+  const [leadDraft, setLeadDraft] = useState({ name: "", email: "", phone: "", message: "" });
+  const store = useAppStore();
+  const baseCompany = companies[companyKey];
+
+  // Merge extra leads + task status overrides + extra tasks into company view
+  const company = useMemo(() => {
+    const extraLeads = store.extraLeads[companyKey] ?? [];
+    const extraTasks = store.extraTasks[companyKey] ?? [];
+    const overrides = store.taskStatusOverrides[companyKey] ?? {};
+    const mergedTasks = [...extraTasks, ...baseCompany.tasks].map((t: any) => {
+      const status: TaskStatus = (overrides[t.name] ?? t.status) as TaskStatus;
+      return { ...t, status, statusTone: TASK_TONE[status] ?? t.statusTone };
+    });
+    return { ...baseCompany, leads: [...extraLeads, ...baseCompany.leads], tasks: mergedTasks };
+  }, [baseCompany, companyKey, store.extraLeads, store.extraTasks, store.taskStatusOverrides]);
+
+  // Global search filter for the leads table
+  const q = store.search.trim().toLowerCase();
+  const filteredLeads = useMemo(() => {
+    if (!q) return company.leads;
+    return company.leads.filter((l: any) =>
+      [l.name, l.email, l.phone, l.message, l.stage, l.camp].join(" ").toLowerCase().includes(q),
+    );
+  }, [company.leads, q]);
 
   const industry = industryNav[companyKey];
 
   const totalPipeline = useMemo(
-    () => company.pipeline.reduce((a, s) => a + s.count, 0),
+    () => company.pipeline.reduce((a: number, s: any) => a + s.count, 0),
     [company],
   );
+
+  const exportReport = () => {
+    downloadCSV(
+      `${baseCompany.name.replace(/\s+/g, "_").toLowerCase()}_leads.csv`,
+      company.leads.map((l: any) => ({
+        name: l.name, email: l.email, phone: l.phone, stage: l.stage, ref: l.camp, message: l.message, time: l.time,
+      })),
+    );
+    toast.success("Report exported");
+  };
+
+  const submitLead = () => {
+    const name = leadDraft.name.trim();
+    if (!name) {
+      toast.error("Name is required");
+      return;
+    }
+    const initials = name.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase() || "??";
+    store.addLead(companyKey, {
+      name,
+      time: "Just now",
+      email: leadDraft.email.trim() || "—",
+      phone: leadDraft.phone.trim() || "—",
+      camp: `MAN-${Math.floor(1000 + Math.random() * 9000)}`,
+      message: leadDraft.message.trim() || "Manually added lead",
+      initials,
+      tone: "bg-[#4285F4] text-white",
+      stage: "New",
+      stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30",
+    });
+    store.bumpUnread();
+    toast.success(`Added ${name}`);
+    setLeadDraft({ name: "", email: "", phone: "", message: "" });
+    setAddLeadOpen(false);
+  };
+
 
   const sidebarContent = (
     <>
