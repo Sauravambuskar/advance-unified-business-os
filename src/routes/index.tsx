@@ -2,6 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AskAi } from "@/components/ask-ai-panel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  AppStoreProvider,
+  useAppStore,
+  downloadCSV,
+  Modal,
+  QUOTE_TONE,
+  INV_TONE,
+  TASK_TONE,
+  type TaskStatus,
+} from "@/lib/app-store";
+import { toast } from "sonner";
+
 
 import {
   LayoutDashboard,
@@ -37,8 +49,17 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: Dashboard,
+  component: DashboardWrapper,
 });
+
+function DashboardWrapper() {
+  return (
+    <AppStoreProvider>
+      <Dashboard />
+    </AppStoreProvider>
+  );
+}
+
 
 // ------------------------------------------------------------------
 // Companies (multi-company management). Switching this drives all data.
@@ -309,14 +330,75 @@ function Dashboard() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [activeView, setActiveView] = useState<string>("Executive Dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const company = companies[companyKey];
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [addLeadOpen, setAddLeadOpen] = useState(false);
+  const [leadDraft, setLeadDraft] = useState({ name: "", email: "", phone: "", message: "" });
+  const store = useAppStore();
+  const baseCompany = companies[companyKey];
+
+  // Merge extra leads + task status overrides + extra tasks into company view
+  const company = useMemo(() => {
+    const extraLeads = store.extraLeads[companyKey] ?? [];
+    const extraTasks = store.extraTasks[companyKey] ?? [];
+    const overrides = store.taskStatusOverrides[companyKey] ?? {};
+    const mergedTasks = [...extraTasks, ...baseCompany.tasks].map((t: any) => {
+      const status: TaskStatus = (overrides[t.name] ?? t.status) as TaskStatus;
+      return { ...t, status, statusTone: TASK_TONE[status] ?? t.statusTone };
+    });
+    return { ...baseCompany, leads: [...extraLeads, ...baseCompany.leads], tasks: mergedTasks };
+  }, [baseCompany, companyKey, store.extraLeads, store.extraTasks, store.taskStatusOverrides]);
+
+  // Global search filter for the leads table
+  const q = store.search.trim().toLowerCase();
+  const filteredLeads = useMemo(() => {
+    if (!q) return company.leads;
+    return company.leads.filter((l: any) =>
+      [l.name, l.email, l.phone, l.message, l.stage, l.camp].join(" ").toLowerCase().includes(q),
+    );
+  }, [company.leads, q]);
 
   const industry = industryNav[companyKey];
 
   const totalPipeline = useMemo(
-    () => company.pipeline.reduce((a, s) => a + s.count, 0),
+    () => company.pipeline.reduce((a: number, s: any) => a + s.count, 0),
     [company],
   );
+
+  const exportReport = () => {
+    downloadCSV(
+      `${baseCompany.name.replace(/\s+/g, "_").toLowerCase()}_leads.csv`,
+      company.leads.map((l: any) => ({
+        name: l.name, email: l.email, phone: l.phone, stage: l.stage, ref: l.camp, message: l.message, time: l.time,
+      })),
+    );
+    toast.success("Report exported");
+  };
+
+  const submitLead = () => {
+    const name = leadDraft.name.trim();
+    if (!name) {
+      toast.error("Name is required");
+      return;
+    }
+    const initials = name.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase() || "??";
+    store.addLead(companyKey, {
+      name,
+      time: "Just now",
+      email: leadDraft.email.trim() || "—",
+      phone: leadDraft.phone.trim() || "—",
+      camp: `MAN-${Math.floor(1000 + Math.random() * 9000)}`,
+      message: leadDraft.message.trim() || "Manually added lead",
+      initials,
+      tone: "bg-[#4285F4] text-white",
+      stage: "New",
+      stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30",
+    });
+    store.bumpUnread();
+    toast.success(`Added ${name}`);
+    setLeadDraft({ name: "", email: "", phone: "", message: "" });
+    setAddLeadOpen(false);
+  };
+
 
   const sidebarContent = (
     <>
@@ -503,7 +585,9 @@ function Dashboard() {
               <Search className="size-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder={`Search ${company.name}…`}
+                value={store.search}
+                onChange={(e) => store.setSearch(e.target.value)}
+                placeholder={`Search leads across ${company.name}…`}
                 className="w-full h-9 pl-9 pr-3 rounded-lg border border-zinc-200 bg-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-300"
               />
             </div>
@@ -514,21 +598,75 @@ function Dashboard() {
             <button className="hidden lg:flex items-center gap-1.5 text-sm text-zinc-600 font-medium px-3 py-2 rounded-lg hover:bg-zinc-50">
               English <ChevronDown className="size-3.5" />
             </button>
-            <button className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50 shrink-0">
-              <Bell className="size-4 text-zinc-700" />
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-[#EA4335]" />
-            </button>
-            <button className="hidden sm:flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors shrink-0">
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setNotifOpen((v) => !v);
+                  if (!notifOpen) store.markAllRead();
+                }}
+                className="relative size-9 rounded-lg border border-zinc-200 grid place-items-center hover:bg-zinc-50 shrink-0"
+                aria-label="Notifications"
+              >
+                <Bell className="size-4 text-zinc-700" />
+                {store.unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-[#EA4335] text-white text-[9px] font-bold grid place-items-center">
+                    {store.unreadCount > 9 ? "9+" : store.unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl ring-1 ring-black/5 z-20 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-zinc-100 flex items-center justify-between">
+                      <p className="text-sm font-semibold">Notifications</p>
+                      <button
+                        onClick={() => store.markAllRead()}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-900"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto divide-y divide-zinc-100">
+                      {company.activity.map((n: any, i: number) => (
+                        <div key={i} className="px-4 py-3 flex items-start gap-3">
+                          <div className={`mt-1.5 size-2 rounded-full shrink-0 ${n.tone}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold truncate">{n.title}</p>
+                            <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">{n.body}</p>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 font-mono shrink-0">{n.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setNotifOpen(false);
+                        setActiveView("Notifications");
+                      }}
+                      className="w-full py-2.5 text-xs font-semibold border-t border-zinc-100 hover:bg-zinc-50"
+                    >
+                      View all
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => setAddLeadOpen(true)}
+              className="hidden sm:flex items-center gap-2 bg-zinc-900 text-white text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors shrink-0"
+            >
               <Plus className="size-4" /> <span className="hidden md:inline">Add person</span>
             </button>
           </div>
         </header>
 
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {activeView !== "Executive Dashboard" && (
-              <ModuleView view={activeView} company={company} />
+              <ModuleView view={activeView} company={company} companyKey={companyKey} />
             )}
             {activeView === "Executive Dashboard" && (<>
 
@@ -555,13 +693,20 @@ function Dashboard() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50">
+                  <button
+                    onClick={exportReport}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50"
+                  >
                     <Download className="size-3.5" /> Export report
                   </button>
-                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+                  <button
+                    onClick={() => setActiveView("Automations")}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800"
+                  >
                     <Zap className="size-3.5" /> New automation
                   </button>
                 </div>
+
               </div>
             </div>
 
@@ -652,7 +797,7 @@ function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-950/5">
-                        {company.leads.map((l) => (
+                        {filteredLeads.map((l: any) => (
                           <tr key={l.name + l.camp} className="hover:bg-zinc-50/60 transition-colors">
                             <td className="px-6 py-3.5">
                               <div className="flex items-center gap-3">
@@ -996,9 +1141,30 @@ function Dashboard() {
         </div>
 
       </main>
+
+      {/* Add person modal */}
+      <Modal open={addLeadOpen} onClose={() => setAddLeadOpen(false)} title={`Add person · ${baseCompany.name}`}>
+        <label className="block text-xs font-medium text-zinc-600">Full name
+          <input autoFocus value={leadDraft.name} onChange={(e) => setLeadDraft((d) => ({ ...d, name: e.target.value }))} maxLength={80} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Email
+          <input value={leadDraft.email} onChange={(e) => setLeadDraft((d) => ({ ...d, email: e.target.value }))} maxLength={120} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Phone
+          <input value={leadDraft.phone} onChange={(e) => setLeadDraft((d) => ({ ...d, phone: e.target.value }))} maxLength={40} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Message
+          <textarea value={leadDraft.message} onChange={(e) => setLeadDraft((d) => ({ ...d, message: e.target.value }))} maxLength={280} rows={3} className="mt-1 w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={() => setAddLeadOpen(false)} className="px-3 py-2 text-xs font-semibold rounded-lg border border-zinc-200 hover:bg-zinc-50">Cancel</button>
+          <button onClick={submitLead} className="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">Add lead</button>
+        </div>
+      </Modal>
     </div>
   );
 }
+
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -1047,7 +1213,64 @@ function NavItem({
 // Executive Dashboard is active. Every core / industry / system item
 // has a working destination so nothing in the nav is dead.
 // ------------------------------------------------------------------
-function ModuleView({ view, company }: { view: string; company: any }) {
+function ModuleView({ view, company, companyKey }: { view: string; company: any; companyKey: string }) {
+  const store = useAppStore();
+
+  const onExport = () => {
+    if (view === "Quotations") {
+      downloadCSV("quotations.csv", store.quotations);
+    } else if (view === "Invoicing") {
+      downloadCSV("invoices.csv", store.invoices);
+    } else if (view === "Task Management") {
+      downloadCSV(`${companyKey}_tasks.csv`, company.tasks);
+    } else if (view === "CRM" || view === "Lead Management" || view === "Customer Portal") {
+      downloadCSV(`${companyKey}_contacts.csv`, company.leads.map((l: any) => ({
+        name: l.name, email: l.email, phone: l.phone, stage: l.stage, ref: l.camp,
+      })));
+    } else if (view === "Notifications") {
+      downloadCSV(`${companyKey}_activity.csv`, company.activity);
+    } else if (view === "Automations") {
+      downloadCSV("automations.csv", store.automations);
+    } else {
+      downloadCSV(`${companyKey}_${view.replace(/\s+/g, "_").toLowerCase()}.csv`, company.leads.map((l: any) => ({
+        name: l.name, stage: l.stage, ref: l.camp,
+      })));
+    }
+    toast.success("Exported");
+  };
+
+  const onNew = () => {
+    if (view === "Quotations") {
+      store.addQuotation({
+        client: "New Client",
+        amount: "₹1.00 L",
+        status: "Draft",
+        date: new Date().toLocaleDateString("en-IN", { month: "short", day: "2-digit" }),
+      });
+      toast.success("Draft quotation created");
+    } else if (view === "Invoicing") {
+      store.addInvoice({
+        client: "New Client",
+        amount: "₹1.00 L",
+        status: "Draft",
+        due: new Date(Date.now() + 14 * 864e5).toLocaleDateString("en-IN", { month: "short", day: "2-digit" }),
+      });
+      toast.success("Draft invoice created");
+    } else if (view === "Task Management") {
+      store.addTask(companyKey, {
+        name: `New task ${new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`,
+        owner: "You",
+        due: "Today",
+        status: "Pending",
+      });
+      toast.success("Task added");
+    } else if (view === "Automations") {
+      toast("Automation builder coming soon");
+    } else {
+      toast(`New ${view} — form coming soon`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -1061,15 +1284,15 @@ function ModuleView({ view, company }: { view: string; company: any }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
+          <button onClick={onExport} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
             <Download className="size-3.5" /> Export
           </button>
-          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+          <button onClick={onNew} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
             <Plus className="size-3.5" /> New
           </button>
         </div>
       </div>
-      {renderModuleBody(view, company)}
+      {renderModuleBody(view, company, companyKey)}
     </div>
   );
 }
@@ -1094,7 +1317,7 @@ function moduleBlurb(view: string) {
   return map[view] ?? "Business module scoped to the selected company";
 }
 
-function renderModuleBody(view: string, company: any) {
+function renderModuleBody(view: string, company: any, companyKey: string) {
   switch (view) {
     case "CRM":
       return <CRMView company={company} />;
@@ -1103,13 +1326,13 @@ function renderModuleBody(view: string, company: any) {
     case "Sales Pipeline":
       return <PipelineView company={company} />;
     case "Quotations":
-      return <QuotationsView company={company} />;
+      return <QuotationsView />;
     case "Invoicing":
-      return <InvoicingView company={company} />;
+      return <InvoicingView />;
     case "Customer Portal":
       return <CustomerPortalView company={company} />;
     case "Task Management":
-      return <TasksView company={company} />;
+      return <TasksView company={company} companyKey={companyKey} />;
     case "Project Management":
       return <ProjectsView />;
     case "Document Management":
@@ -1123,11 +1346,12 @@ function renderModuleBody(view: string, company: any) {
     case "Automations":
       return <AutomationsView />;
     case "Settings":
-      return <SettingsView company={company} />;
+      return <SettingsView company={company} companyKey={companyKey} />;
     default:
       return <IndustryView view={view} company={company} />;
   }
 }
+
 
 function Panel({ title, subtitle, children }: any) {
   return (
@@ -1668,16 +1892,10 @@ function PipelineView({ company }: any) {
   );
 }
 
-const quotationsData = [
-  { id: "Q-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Approved", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", date: "Jul 02" },
-  { id: "Q-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", date: "Jul 03" },
-  { id: "Q-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", date: "Jul 04" },
-  { id: "Q-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Awaiting Approval", tone: "bg-amber-50 text-amber-700 ring-amber-200", date: "Jul 05" },
-];
-
-function QuotationsView(_: any) {
+function QuotationsView() {
+  const store = useAppStore();
   return (
-    <Panel title="Quotations" subtitle="Approval workflow · convert to invoice on accept">
+    <Panel title="Quotations" subtitle="Click a status to cycle · trash to delete">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -1687,20 +1905,38 @@ function QuotationsView(_: any) {
               <th className="px-6 py-3">Amount</th>
               <th className="px-6 py-3">Date</th>
               <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-950/5">
-            {quotationsData.map((q) => (
+            {store.quotations.map((q) => (
               <tr key={q.id} className="hover:bg-zinc-50/60">
                 <td className="px-6 py-3.5 text-xs font-mono">{q.id}</td>
                 <td className="px-6 py-3.5 text-sm font-medium">{q.client}</td>
                 <td className="px-6 py-3.5 text-sm font-mono">{q.amount}</td>
                 <td className="px-6 py-3.5 text-xs text-zinc-500">{q.date}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${q.tone}`}>{q.status}</span>
+                  <button
+                    onClick={() => store.cycleQuotation(q.id)}
+                    className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${QUOTE_TONE[q.status]} hover:opacity-80`}
+                    title="Click to advance status"
+                  >
+                    {q.status}
+                  </button>
+                </td>
+                <td className="px-6 py-3.5 text-right">
+                  <button
+                    onClick={() => { store.deleteQuotation(q.id); toast.success("Deleted"); }}
+                    className="text-[11px] text-zinc-400 hover:text-rose-600"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
+            {store.quotations.length === 0 && (
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-zinc-500">No quotations. Use New to add one.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -1708,21 +1944,25 @@ function QuotationsView(_: any) {
   );
 }
 
-const invoicesData = [
-  { id: "INV-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Paid", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", due: "Jun 28" },
-  { id: "INV-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Overdue", tone: "bg-rose-50 text-rose-700 ring-rose-200", due: "Jun 30" },
-  { id: "INV-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", due: "Jul 12" },
-  { id: "INV-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", due: "Jul 15" },
-];
-
-function InvoicingView(_: any) {
+function InvoicingView() {
+  const store = useAppStore();
+  const totals = useMemo(() => {
+    let outstanding = 0, paid = 0, overdue = 0;
+    for (const i of store.invoices) {
+      const n = parseAmount(i.amount);
+      if (i.status === "Paid") paid += n;
+      else outstanding += n;
+      if (i.status === "Overdue") overdue += n;
+    }
+    return { outstanding, paid, overdue };
+  }, [store.invoices]);
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { l: "Outstanding", v: "₹5.68 Cr", tone: "text-amber-600" },
-          { l: "Paid (MTD)", v: "₹3.42 Cr", tone: "text-emerald-600" },
-          { l: "Overdue", v: "₹39.8 L", tone: "text-rose-600" },
+          { l: "Outstanding", v: formatAmount(totals.outstanding), tone: "text-amber-600" },
+          { l: "Paid (MTD)", v: formatAmount(totals.paid), tone: "text-emerald-600" },
+          { l: "Overdue", v: formatAmount(totals.overdue), tone: "text-rose-600" },
         ].map((k) => (
           <div key={k.l} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
             <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
@@ -1730,7 +1970,7 @@ function InvoicingView(_: any) {
           </div>
         ))}
       </div>
-      <Panel title="Invoices" subtitle="Automated reminders on overdue">
+      <Panel title="Invoices" subtitle="Click a status to cycle · trash to delete">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -1740,20 +1980,38 @@ function InvoicingView(_: any) {
                 <th className="px-6 py-3">Amount</th>
                 <th className="px-6 py-3">Due</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-950/5">
-              {invoicesData.map((i) => (
+              {store.invoices.map((i) => (
                 <tr key={i.id} className="hover:bg-zinc-50/60">
                   <td className="px-6 py-3.5 text-xs font-mono">{i.id}</td>
                   <td className="px-6 py-3.5 text-sm font-medium">{i.client}</td>
                   <td className="px-6 py-3.5 text-sm font-mono">{i.amount}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-500">{i.due}</td>
                   <td className="px-6 py-3.5">
-                    <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${i.tone}`}>{i.status}</span>
+                    <button
+                      onClick={() => store.cycleInvoice(i.id)}
+                      className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${INV_TONE[i.status]} hover:opacity-80`}
+                      title="Click to advance status"
+                    >
+                      {i.status}
+                    </button>
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <button
+                      onClick={() => { store.deleteInvoice(i.id); toast.success("Deleted"); }}
+                      className="text-[11px] text-zinc-400 hover:text-rose-600"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
+              {store.invoices.length === 0 && (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-zinc-500">No invoices. Use New to add one.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1761,6 +2019,25 @@ function InvoicingView(_: any) {
     </>
   );
 }
+
+// Parse "₹23.6 L" / "₹3.42 Cr" into rupees. Returns 0 for other formats.
+function parseAmount(s: string): number {
+  const m = /₹\s*([\d.]+)\s*(L|Cr|K)?/i.exec(s);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  const unit = (m[2] ?? "").toLowerCase();
+  if (unit === "cr") return n * 1e7;
+  if (unit === "l") return n * 1e5;
+  if (unit === "k") return n * 1e3;
+  return n;
+}
+function formatAmount(n: number): string {
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(2)} L`;
+  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1)} K`;
+  return `₹${n.toFixed(0)}`;
+}
+
 
 function CustomerPortalView({ company }: any) {
   return (
@@ -1788,27 +2065,54 @@ function CustomerPortalView({ company }: any) {
   );
 }
 
-function TasksView({ company }: any) {
-  const cols = ["Pending", "In Progress", "Blocked", "On Track"];
+function TasksView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const cols: TaskStatus[] = ["Pending", "In Progress", "On Track", "Blocked"];
+  const onDrop = (status: TaskStatus) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const name = e.dataTransfer.getData("text/plain");
+    if (name) store.setTaskStatus(companyKey, name, status);
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {cols.map((c) => (
-        <div key={c} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3">
-          <p className="text-xs font-semibold">{c}</p>
+        <div
+          key={c}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDrop(c)}
+          className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-4 space-y-3 min-h-40"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold">{c}</p>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ring-1 ${TASK_TONE[c]}`}>
+              {company.tasks.filter((t: any) => t.status === c).length}
+            </span>
+          </div>
           {company.tasks.filter((t: any) => t.status === c).map((t: any) => (
-            <div key={t.name} className="rounded-xl border border-zinc-100 p-3">
+            <div
+              key={t.name}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData("text/plain", t.name)}
+              onClick={() => {
+                const idx = cols.indexOf(c);
+                store.setTaskStatus(companyKey, t.name, cols[(idx + 1) % cols.length]);
+              }}
+              className="rounded-xl border border-zinc-100 p-3 cursor-grab active:cursor-grabbing hover:border-zinc-300"
+              title="Drag to another column or click to advance"
+            >
               <p className="text-xs font-medium">{t.name}</p>
               <p className="text-[10px] text-zinc-500 mt-1">{t.owner} · {t.due}</p>
             </div>
           ))}
           {company.tasks.filter((t: any) => t.status === c).length === 0 && (
-            <p className="text-[11px] text-zinc-400 italic">No tasks</p>
+            <p className="text-[11px] text-zinc-400 italic">Drop tasks here</p>
           )}
         </div>
       ))}
     </div>
   );
 }
+
 
 const projectsData = [
   { name: "Skyline Tower Launch", phase: "Execution", progress: 62, owner: "Real Estate" },
@@ -1959,59 +2263,105 @@ function RolesView() {
   );
 }
 
-const automationsData = [
-  { name: "Auto-assign leads by source", trigger: "New lead", status: "Active" },
-  { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active" },
-  { name: "Escalate approvals > ₹8.3 L", trigger: "Quotation submitted", status: "Active" },
-  { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused" },
-];
-
 function AutomationsView() {
+  const store = useAppStore();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {automationsData.map((a) => (
-        <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center">
-                <Zap className="size-4 text-zinc-700" />
+      {store.automations.map((a) => {
+        const active = a.status === "Active";
+        return (
+          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
+                  <Zap className="size-4 text-zinc-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{a.name}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold">{a.name}</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
-              </div>
+              <button
+                onClick={() => {
+                  store.toggleAutomation(a.name);
+                  toast.success(active ? "Paused" : "Activated");
+                }}
+                role="switch"
+                aria-checked={active}
+                className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${active ? "bg-[#34A853]" : "bg-zinc-300"}`}
+                title={active ? "Pause" : "Activate"}
+              >
+                <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${active ? "left-[22px]" : "left-0.5"}`} />
+              </button>
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${a.status === "Active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-zinc-100 text-zinc-600 ring-zinc-200"}`}>
+            <p className={`mt-3 text-[10px] font-semibold ${active ? "text-emerald-600" : "text-zinc-500"}`}>
               {a.status}
-            </span>
+            </p>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function SettingsView({ company }: any) {
+function SettingsView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const s = store.settings[companyKey] ?? { timezone: "Asia/Kolkata", currency: "INR" };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Panel title="Company Profile">
+      <Panel title="Company Profile" subtitle="Editable · saved locally to this session">
         <div className="p-5 space-y-3 text-sm">
-          <div className="flex justify-between"><span className="text-zinc-500">Name</span><span className="font-medium">{company.name}</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Segment</span><span className="font-medium">{company.kind}</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Timezone</span><span className="font-medium">Asia/Dhaka</span></div>
-          <div className="flex justify-between"><span className="text-zinc-500">Currency</span><span className="font-medium">INR</span></div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Name</span>
+            <span className="font-medium">{company.name}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Segment</span>
+            <span className="font-medium">{company.kind}</span>
+          </div>
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Timezone</span>
+            <select
+              value={s.timezone}
+              onChange={(e) => store.updateSettings(companyKey, { timezone: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            >
+              {["Asia/Kolkata", "Asia/Dhaka", "Asia/Dubai", "Europe/London", "America/New_York"].map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-zinc-500">Currency</span>
+            <select
+              value={s.currency}
+              onChange={(e) => store.updateSettings(companyKey, { currency: e.target.value })}
+              className="h-8 px-2 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            >
+              {["INR", "USD", "EUR", "GBP", "AED"].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={() => toast.success("Settings saved")}
+            className="w-full mt-2 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
+          >
+            Save changes
+          </button>
         </div>
       </Panel>
       <Panel title="Security">
         <ul className="p-5 space-y-2.5 text-xs text-zinc-600">
-          {["Role-based permissions enforced","Audit log active","Encrypted storage · backups verified","API keys rotated 4 days ago"].map((s) => (
-            <li key={s} className="flex items-center gap-2"><Check className="size-3.5 text-emerald-600" /><span>{s}</span></li>
+          {["Role-based permissions enforced","Audit log active","Encrypted storage · backups verified","API keys rotated 4 days ago"].map((line) => (
+            <li key={line} className="flex items-center gap-2"><Check className="size-3.5 text-emerald-600" /><span>{line}</span></li>
           ))}
         </ul>
       </Panel>
     </div>
   );
 }
+
 
 function IndustryView({ view, company }: any) {
   const match = company.industry.find((m: any) => m.label === view);
