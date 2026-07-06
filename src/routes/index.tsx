@@ -1141,9 +1141,30 @@ function Dashboard() {
         </div>
 
       </main>
+
+      {/* Add person modal */}
+      <Modal open={addLeadOpen} onClose={() => setAddLeadOpen(false)} title={`Add person · ${baseCompany.name}`}>
+        <label className="block text-xs font-medium text-zinc-600">Full name
+          <input autoFocus value={leadDraft.name} onChange={(e) => setLeadDraft((d) => ({ ...d, name: e.target.value }))} maxLength={80} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Email
+          <input value={leadDraft.email} onChange={(e) => setLeadDraft((d) => ({ ...d, email: e.target.value }))} maxLength={120} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Phone
+          <input value={leadDraft.phone} onChange={(e) => setLeadDraft((d) => ({ ...d, phone: e.target.value }))} maxLength={40} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <label className="block text-xs font-medium text-zinc-600">Message
+          <textarea value={leadDraft.message} onChange={(e) => setLeadDraft((d) => ({ ...d, message: e.target.value }))} maxLength={280} rows={3} className="mt-1 w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+        </label>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={() => setAddLeadOpen(false)} className="px-3 py-2 text-xs font-semibold rounded-lg border border-zinc-200 hover:bg-zinc-50">Cancel</button>
+          <button onClick={submitLead} className="px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">Add lead</button>
+        </div>
+      </Modal>
     </div>
   );
 }
+
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
