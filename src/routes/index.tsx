@@ -1213,7 +1213,64 @@ function NavItem({
 // Executive Dashboard is active. Every core / industry / system item
 // has a working destination so nothing in the nav is dead.
 // ------------------------------------------------------------------
-function ModuleView({ view, company }: { view: string; company: any }) {
+function ModuleView({ view, company, companyKey }: { view: string; company: any; companyKey: string }) {
+  const store = useAppStore();
+
+  const onExport = () => {
+    if (view === "Quotations") {
+      downloadCSV("quotations.csv", store.quotations);
+    } else if (view === "Invoicing") {
+      downloadCSV("invoices.csv", store.invoices);
+    } else if (view === "Task Management") {
+      downloadCSV(`${companyKey}_tasks.csv`, company.tasks);
+    } else if (view === "CRM" || view === "Lead Management" || view === "Customer Portal") {
+      downloadCSV(`${companyKey}_contacts.csv`, company.leads.map((l: any) => ({
+        name: l.name, email: l.email, phone: l.phone, stage: l.stage, ref: l.camp,
+      })));
+    } else if (view === "Notifications") {
+      downloadCSV(`${companyKey}_activity.csv`, company.activity);
+    } else if (view === "Automations") {
+      downloadCSV("automations.csv", store.automations);
+    } else {
+      downloadCSV(`${companyKey}_${view.replace(/\s+/g, "_").toLowerCase()}.csv`, company.leads.map((l: any) => ({
+        name: l.name, stage: l.stage, ref: l.camp,
+      })));
+    }
+    toast.success("Exported");
+  };
+
+  const onNew = () => {
+    if (view === "Quotations") {
+      store.addQuotation({
+        client: "New Client",
+        amount: "₹1.00 L",
+        status: "Draft",
+        date: new Date().toLocaleDateString("en-IN", { month: "short", day: "2-digit" }),
+      });
+      toast.success("Draft quotation created");
+    } else if (view === "Invoicing") {
+      store.addInvoice({
+        client: "New Client",
+        amount: "₹1.00 L",
+        status: "Draft",
+        due: new Date(Date.now() + 14 * 864e5).toLocaleDateString("en-IN", { month: "short", day: "2-digit" }),
+      });
+      toast.success("Draft invoice created");
+    } else if (view === "Task Management") {
+      store.addTask(companyKey, {
+        name: `New task ${new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`,
+        owner: "You",
+        due: "Today",
+        status: "Pending",
+      });
+      toast.success("Task added");
+    } else if (view === "Automations") {
+      toast("Automation builder coming soon");
+    } else {
+      toast(`New ${view} — form coming soon`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -1227,15 +1284,15 @@ function ModuleView({ view, company }: { view: string; company: any }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
+          <button onClick={onExport} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
             <Download className="size-3.5" /> Export
           </button>
-          <button className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+          <button onClick={onNew} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
             <Plus className="size-3.5" /> New
           </button>
         </div>
       </div>
-      {renderModuleBody(view, company)}
+      {renderModuleBody(view, company, companyKey)}
     </div>
   );
 }
@@ -1260,7 +1317,7 @@ function moduleBlurb(view: string) {
   return map[view] ?? "Business module scoped to the selected company";
 }
 
-function renderModuleBody(view: string, company: any) {
+function renderModuleBody(view: string, company: any, companyKey: string) {
   switch (view) {
     case "CRM":
       return <CRMView company={company} />;
@@ -1269,13 +1326,13 @@ function renderModuleBody(view: string, company: any) {
     case "Sales Pipeline":
       return <PipelineView company={company} />;
     case "Quotations":
-      return <QuotationsView company={company} />;
+      return <QuotationsView />;
     case "Invoicing":
-      return <InvoicingView company={company} />;
+      return <InvoicingView />;
     case "Customer Portal":
       return <CustomerPortalView company={company} />;
     case "Task Management":
-      return <TasksView company={company} />;
+      return <TasksView company={company} companyKey={companyKey} />;
     case "Project Management":
       return <ProjectsView />;
     case "Document Management":
@@ -1289,11 +1346,12 @@ function renderModuleBody(view: string, company: any) {
     case "Automations":
       return <AutomationsView />;
     case "Settings":
-      return <SettingsView company={company} />;
+      return <SettingsView company={company} companyKey={companyKey} />;
     default:
       return <IndustryView view={view} company={company} />;
   }
 }
+
 
 function Panel({ title, subtitle, children }: any) {
   return (
