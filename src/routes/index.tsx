@@ -33,6 +33,7 @@ import {
   Activity,
   DollarSign,
   Clock,
+  Menu,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
