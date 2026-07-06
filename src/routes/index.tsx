@@ -666,7 +666,7 @@ function Dashboard() {
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {activeView !== "Executive Dashboard" && (
-              <ModuleView view={activeView} company={company} />
+              <ModuleView view={activeView} company={company} companyKey={companyKey} />
             )}
             {activeView === "Executive Dashboard" && (<>
 
