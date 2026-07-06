@@ -693,13 +693,20 @@ function Dashboard() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50">
+                  <button
+                    onClick={exportReport}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50"
+                  >
                     <Download className="size-3.5" /> Export report
                   </button>
-                  <button className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+                  <button
+                    onClick={() => setActiveView("Automations")}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800"
+                  >
                     <Zap className="size-3.5" /> New automation
                   </button>
                 </div>
+
               </div>
             </div>
 
