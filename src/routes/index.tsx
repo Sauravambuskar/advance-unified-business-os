@@ -1892,16 +1892,10 @@ function PipelineView({ company }: any) {
   );
 }
 
-const quotationsData = [
-  { id: "Q-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Approved", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", date: "Jul 02" },
-  { id: "Q-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", date: "Jul 03" },
-  { id: "Q-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", date: "Jul 04" },
-  { id: "Q-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Awaiting Approval", tone: "bg-amber-50 text-amber-700 ring-amber-200", date: "Jul 05" },
-];
-
-function QuotationsView(_: any) {
+function QuotationsView() {
+  const store = useAppStore();
   return (
-    <Panel title="Quotations" subtitle="Approval workflow · convert to invoice on accept">
+    <Panel title="Quotations" subtitle="Click a status to cycle · trash to delete">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -1911,20 +1905,38 @@ function QuotationsView(_: any) {
               <th className="px-6 py-3">Amount</th>
               <th className="px-6 py-3">Date</th>
               <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-950/5">
-            {quotationsData.map((q) => (
+            {store.quotations.map((q) => (
               <tr key={q.id} className="hover:bg-zinc-50/60">
                 <td className="px-6 py-3.5 text-xs font-mono">{q.id}</td>
                 <td className="px-6 py-3.5 text-sm font-medium">{q.client}</td>
                 <td className="px-6 py-3.5 text-sm font-mono">{q.amount}</td>
                 <td className="px-6 py-3.5 text-xs text-zinc-500">{q.date}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${q.tone}`}>{q.status}</span>
+                  <button
+                    onClick={() => store.cycleQuotation(q.id)}
+                    className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${QUOTE_TONE[q.status]} hover:opacity-80`}
+                    title="Click to advance status"
+                  >
+                    {q.status}
+                  </button>
+                </td>
+                <td className="px-6 py-3.5 text-right">
+                  <button
+                    onClick={() => { store.deleteQuotation(q.id); toast.success("Deleted"); }}
+                    className="text-[11px] text-zinc-400 hover:text-rose-600"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
+            {store.quotations.length === 0 && (
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-zinc-500">No quotations. Use New to add one.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -1932,21 +1944,25 @@ function QuotationsView(_: any) {
   );
 }
 
-const invoicesData = [
-  { id: "INV-2048", client: "Nordic Ltd.", amount: "₹23.6 L", status: "Paid", tone: "bg-emerald-50 text-emerald-700 ring-emerald-200", due: "Jun 28" },
-  { id: "INV-2049", client: "Harbor Group", amount: "₹12.4 L", status: "Overdue", tone: "bg-rose-50 text-rose-700 ring-rose-200", due: "Jun 30" },
-  { id: "INV-2050", client: "Peak Retail", amount: "₹6.81 L", status: "Sent", tone: "bg-blue-50 text-blue-700 ring-blue-200", due: "Jul 12" },
-  { id: "INV-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Draft", tone: "bg-zinc-100 text-zinc-700 ring-zinc-200", due: "Jul 15" },
-];
-
-function InvoicingView(_: any) {
+function InvoicingView() {
+  const store = useAppStore();
+  const totals = useMemo(() => {
+    let outstanding = 0, paid = 0, overdue = 0;
+    for (const i of store.invoices) {
+      const n = parseAmount(i.amount);
+      if (i.status === "Paid") paid += n;
+      else outstanding += n;
+      if (i.status === "Overdue") overdue += n;
+    }
+    return { outstanding, paid, overdue };
+  }, [store.invoices]);
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { l: "Outstanding", v: "₹5.68 Cr", tone: "text-amber-600" },
-          { l: "Paid (MTD)", v: "₹3.42 Cr", tone: "text-emerald-600" },
-          { l: "Overdue", v: "₹39.8 L", tone: "text-rose-600" },
+          { l: "Outstanding", v: formatAmount(totals.outstanding), tone: "text-amber-600" },
+          { l: "Paid (MTD)", v: formatAmount(totals.paid), tone: "text-emerald-600" },
+          { l: "Overdue", v: formatAmount(totals.overdue), tone: "text-rose-600" },
         ].map((k) => (
           <div key={k.l} className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm p-5">
             <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
@@ -1954,7 +1970,7 @@ function InvoicingView(_: any) {
           </div>
         ))}
       </div>
-      <Panel title="Invoices" subtitle="Automated reminders on overdue">
+      <Panel title="Invoices" subtitle="Click a status to cycle · trash to delete">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -1964,20 +1980,38 @@ function InvoicingView(_: any) {
                 <th className="px-6 py-3">Amount</th>
                 <th className="px-6 py-3">Due</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-950/5">
-              {invoicesData.map((i) => (
+              {store.invoices.map((i) => (
                 <tr key={i.id} className="hover:bg-zinc-50/60">
                   <td className="px-6 py-3.5 text-xs font-mono">{i.id}</td>
                   <td className="px-6 py-3.5 text-sm font-medium">{i.client}</td>
                   <td className="px-6 py-3.5 text-sm font-mono">{i.amount}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-500">{i.due}</td>
                   <td className="px-6 py-3.5">
-                    <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${i.tone}`}>{i.status}</span>
+                    <button
+                      onClick={() => store.cycleInvoice(i.id)}
+                      className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${INV_TONE[i.status]} hover:opacity-80`}
+                      title="Click to advance status"
+                    >
+                      {i.status}
+                    </button>
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <button
+                      onClick={() => { store.deleteInvoice(i.id); toast.success("Deleted"); }}
+                      className="text-[11px] text-zinc-400 hover:text-rose-600"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
+              {store.invoices.length === 0 && (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-zinc-500">No invoices. Use New to add one.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1985,6 +2019,25 @@ function InvoicingView(_: any) {
     </>
   );
 }
+
+// Parse "₹23.6 L" / "₹3.42 Cr" into rupees. Returns 0 for other formats.
+function parseAmount(s: string): number {
+  const m = /₹\s*([\d.]+)\s*(L|Cr|K)?/i.exec(s);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  const unit = (m[2] ?? "").toLowerCase();
+  if (unit === "cr") return n * 1e7;
+  if (unit === "l") return n * 1e5;
+  if (unit === "k") return n * 1e3;
+  return n;
+}
+function formatAmount(n: number): string {
+  if (n >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`;
+  if (n >= 1e5) return `₹${(n / 1e5).toFixed(2)} L`;
+  if (n >= 1e3) return `₹${(n / 1e3).toFixed(1)} K`;
+  return `₹${n.toFixed(0)}`;
+}
+
 
 function CustomerPortalView({ company }: any) {
   return (
