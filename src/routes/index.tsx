@@ -308,6 +308,7 @@ function Dashboard() {
   const [companyKey, setCompanyKey] = useState<CompanyKey>("group");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [activeView, setActiveView] = useState<string>("Executive Dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const company = companies[companyKey];
 
   const industry = industryNav[companyKey];
