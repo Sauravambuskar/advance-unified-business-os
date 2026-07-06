@@ -1582,8 +1582,8 @@ function LeadDetail({ lead, onUpdate, onBack }: {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl ring-1 ring-black/5 shadow-sm overflow-hidden">
-        <div className="h-28 relative" style={{ background: `url(${lead.cover}) center/cover, linear-gradient(135deg,#0f172a,#334155)` }}>
+      <div className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm overflow-hidden">
+        <div className="h-24 sm:h-28 relative" style={{ background: `url(${lead.cover}) center/cover, linear-gradient(135deg,#0f172a,#334155)` }}>
           <button onClick={onBack} className="absolute top-3 left-3 text-xs font-medium bg-white/90 hover:bg-white px-3 py-1.5 rounded-lg ring-1 ring-black/10 shadow-sm">
             ← Back to Leads
           </button>
@@ -1592,38 +1592,39 @@ function LeadDetail({ lead, onUpdate, onBack }: {
             <button className="text-xs font-medium bg-zinc-900 text-white hover:bg-zinc-800 px-3 py-1.5 rounded-lg shadow-sm">Convert</button>
           </div>
         </div>
-        <div className="px-6 pb-5 -mt-10 flex items-end gap-4">
-          <img src={lead.avatar} alt={lead.name} className="size-20 rounded-2xl ring-4 ring-white bg-white shadow-md object-cover" />
-          <div className="flex-1 pb-1">
-            <h2 className="text-xl font-bold tracking-tight">{lead.name}</h2>
-            <p className="text-xs text-zinc-500">{lead.title} · {lead.company}</p>
+        <div className="px-4 sm:px-6 pb-5 pt-4 flex flex-col sm:flex-row sm:items-end gap-4">
+          <img src={lead.avatar} alt={lead.name} className="size-20 rounded-2xl ring-4 ring-white bg-white shadow-md object-cover -mt-14 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold tracking-tight truncate">{lead.name}</h2>
+            <p className="text-xs text-zinc-500 truncate">{lead.title} · {lead.company}</p>
           </div>
-          <div className="pb-1">
+          <div>
             <span className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-md ring-1 bg-amber-50 text-amber-700 ring-amber-200">
               {lead.status}
             </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-0 border-t border-zinc-100">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-0 border-t border-zinc-200">
           {[
             { l: "Lead Owner", k: "owner" as const },
             { l: "Email", k: "email" as const },
             { l: "Phone", k: "phone" as const },
             { l: "Mobile", k: "mobile" as const },
             { l: "Lead Status", k: "status" as const },
-          ].map((f) => (
-            <div key={f.k} className="p-4 border-r last:border-r-0 border-zinc-100">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{f.l}</p>
+          ].map((f, i) => (
+            <div key={f.k} className={`p-4 border-zinc-200 ${i < 4 ? "md:border-r" : ""} ${i % 2 === 0 ? "border-r md:border-r" : ""} ${i < 3 ? "border-b md:border-b-0" : i === 3 ? "border-b md:border-b-0" : ""}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{f.l}</p>
               <input
                 value={lead[f.k] as string}
                 onChange={(e) => onUpdate({ [f.k]: e.target.value } as any)}
-                className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1"
+                className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1 truncate"
               />
             </div>
           ))}
         </div>
       </div>
+
 
       <div className="flex items-center justify-between">
         <button onClick={() => setShowDetails((v) => !v)} className="text-xs font-semibold text-blue-600 hover:text-blue-700">
