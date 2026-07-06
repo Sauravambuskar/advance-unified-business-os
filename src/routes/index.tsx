@@ -318,67 +318,106 @@ function Dashboard() {
     [company],
   );
 
+  const sidebarContent = (
+    <>
+      <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-950/5 shrink-0">
+        <div className="size-8 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white text-xs font-bold">
+          AB
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold tracking-tight leading-none">Advance Suite</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">Business OS</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
+        <SectionLabel>Core Modules</SectionLabel>
+        {coreNav.map((item) => (
+          <NavItem
+            key={item.label}
+            {...item}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+
+        <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
+        {industry.map((item) => (
+          <NavItem
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+
+        <SectionLabel>System</SectionLabel>
+        {systemNav.map((item) => (
+          <NavItem
+            key={item.label}
+            {...item}
+            active={activeView === item.label}
+            onClick={() => {
+              setActiveView(item.label);
+              setMobileNavOpen(false);
+            }}
+          />
+        ))}
+      </nav>
+
+      <div className="p-3 border-t border-zinc-950/5 shrink-0">
+        <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors">
+          <div className="size-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 grid place-items-center text-white text-[11px] font-semibold shrink-0">
+            ST
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-xs font-semibold truncate">Sohan Talukder</p>
+            <p className="text-[10px] text-zinc-500">Super Admin</p>
+          </div>
+          <MoreHorizontal className="size-4 text-zinc-400 shrink-0" />
+        </button>
+      </div>
+    </>
+  );
+
+  const snapshot = {
+    companyName: company.name,
+    companyKind: company.kind,
+    view: activeView,
+    kpis: company.kpis.map((k) => ({ label: k.label, value: k.value, delta: k.delta })),
+    leads: company.leads.map((l) => ({
+      name: l.name,
+      time: l.time,
+      stage: l.stage,
+      message: l.message,
+      phone: l.phone,
+      email: l.email,
+    })),
+    pipeline: company.pipeline.map((p) => ({ stage: p.stage, count: p.count, value: p.value })),
+    tasks: company.tasks.map((t) => ({ name: t.name, owner: t.owner, due: t.due, status: t.status })),
+    activity: company.activity.map((a) => ({ title: a.title, body: a.body, time: a.time })),
+  };
+
   return (
     <div className="flex h-screen bg-[#f9f9f8] text-zinc-900 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 flex flex-col border-r border-zinc-950/5 bg-white">
-        <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-950/5">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white text-xs font-bold">
-            AB
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold tracking-tight leading-none">Advance Suite</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Business OS</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-0.5">
-          <SectionLabel>Core Modules</SectionLabel>
-          {coreNav.map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-          <SectionLabel>{companyKey === "group" ? "Industry Suites" : "Industry Module"}</SectionLabel>
-          {industry.map((item) => (
-            <NavItem
-              key={item.label}
-              icon={item.icon}
-              label={item.label}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-          <SectionLabel>System</SectionLabel>
-          {systemNav.map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-              active={activeView === item.label}
-              onClick={() => setActiveView(item.label)}
-            />
-          ))}
-
-        </nav>
-
-        <div className="p-3 border-t border-zinc-950/5">
-          <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors">
-            <div className="size-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 grid place-items-center text-white text-[11px] font-semibold shrink-0">
-              ST
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-xs font-semibold truncate">Sohan Talukder</p>
-              <p className="text-[10px] text-zinc-500">Super Admin</p>
-            </div>
-            <MoreHorizontal className="size-4 text-zinc-400 shrink-0" />
-          </button>
-        </div>
+      {/* Desktop Sidebar */}
+      <aside className="w-64 shrink-0 hidden lg:flex flex-col border-r border-zinc-950/5 bg-white">
+        {sidebarContent}
       </aside>
+
+      {/* Mobile Sidebar (Sheet) */}
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="p-0 w-72 flex flex-col bg-white">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
