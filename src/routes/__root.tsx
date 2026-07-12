@@ -86,10 +86,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "One platform to run every Advance Group company — CRM, sales pipeline, invoicing, operations, education, real estate, and facility management.",
+          "Unified Business Operating System for Advance Group — manage CRM, leads, sales, invoicing, and operations across every company from one control tower.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Advance Business Suite — Business OS" },
+      { name: "twitter:description", content: "Unified Business Operating System for Advance Group — manage CRM, leads, sales, invoicing, and operations across every company from one control tower." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4e7cb915-7888-4238-a20b-310368995bdf/id-preview-7fdfb344--4ae3f947-f5d6-47c1-8215-cda96d4f2073.lovable.app-1783348476959.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4e7cb915-7888-4238-a20b-310368995bdf/id-preview-7fdfb344--4ae3f947-f5d6-47c1-8215-cda96d4f2073.lovable.app-1783348476959.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
