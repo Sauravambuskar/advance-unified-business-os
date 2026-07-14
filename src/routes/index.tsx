@@ -1358,6 +1358,74 @@ function renderModuleBody(view: string, company: any, companyKey: string) {
 }
 
 
+// Quick action controls attached to every lead row: one-tap call and one-tap
+// stage cycle. The intent is to update leads without opening the detail panel.
+function leadKeyOf(l: any) { return `${l.name}::${l.camp ?? ""}`; }
+
+function QuickCallButton({ lead, companyKey, companyName }: { lead: any; companyKey: string; companyName: string }) {
+  const store = useAppStore();
+  const key = leadKeyOf(lead);
+  const logs = store.callLogs.filter((c) => c.leadKey === key);
+  const last = logs[0];
+  const handle = () => {
+    store.logCall({ leadKey: key, name: lead.name, phone: lead.phone, company: companyName });
+    // Auto-advance New → Contacted so calling actually moves the lead forward.
+    const currentStage = store.leadStages[companyKey]?.[key] ?? lead.stage;
+    if (currentStage === "New") store.setLeadStage(companyKey, key, "Contacted");
+    toast.success(`Calling ${lead.name}`, { description: lead.phone });
+  };
+  return (
+    <a
+      href={`tel:${(lead.phone || "").replace(/[^+\d]/g, "")}`}
+      onClick={handle}
+      title={last ? `Last called ${new Date(last.at).toLocaleString()}` : `Call ${lead.name}`}
+      className="relative inline-flex size-8 items-center justify-center rounded-md bg-[#34A853] text-white hover:bg-[#2c8f46] transition-colors shadow-sm"
+      aria-label={`Call ${lead.name}`}
+    >
+      <Phone className="size-3.5" />
+      {logs.length > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-zinc-900 text-white text-[9px] font-bold grid place-items-center ring-2 ring-white">
+          {logs.length}
+        </span>
+      )}
+    </a>
+  );
+}
+
+function QuickStageChip({ lead, companyKey }: { lead: any; companyKey: string }) {
+  const store = useAppStore();
+  const key = leadKeyOf(lead);
+  const override = store.leadStages[companyKey]?.[key];
+  const isOverride = Boolean(override);
+  const stage = (override ?? lead.stage) as string;
+  const tone = isOverride && (LEAD_STAGES as readonly string[]).includes(stage)
+    ? LEAD_STAGE_TONE[stage as LeadStage]
+    : lead.stageTone;
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={() => store.cycleLeadStage(companyKey, key, stage)}
+        title="Click to advance stage"
+        className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-none ring-1 ${tone} hover:opacity-90`}
+      >
+        {stage}
+      </button>
+      <select
+        value={(LEAD_STAGES as readonly string[]).includes(stage) ? stage : ""}
+        onChange={(e) => store.setLeadStage(companyKey, key, e.target.value as LeadStage)}
+        className="text-[10px] bg-white border border-zinc-200 rounded px-1 py-0.5 text-zinc-600 hover:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+        aria-label="Set stage"
+      >
+        <option value="" disabled>Set…</option>
+        {LEAD_STAGES.map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+
 function Panel({ title, subtitle, children }: any) {
   return (
     <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
