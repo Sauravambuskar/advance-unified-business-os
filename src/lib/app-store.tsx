@@ -111,6 +111,13 @@ type Store = {
   extraLeads: Record<string, ExtraLead[]>;
   addLead: (companyKey: string, l: ExtraLead) => void;
 
+  // lead stage quick-overrides + call logs
+  leadStages: Record<string, Record<string, LeadStage>>;
+  setLeadStage: (companyKey: string, leadKey: string, stage: LeadStage) => void;
+  cycleLeadStage: (companyKey: string, leadKey: string, current: string) => void;
+  callLogs: CallLog[];
+  logCall: (entry: Omit<CallLog, "at">) => void;
+
   // automations
   automations: AutomationItem[];
   toggleAutomation: (name: string) => void;
