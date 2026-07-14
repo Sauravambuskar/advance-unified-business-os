@@ -34,6 +34,20 @@ export const TASK_TONE: Record<TaskStatus, string> = {
   Blocked: "bg-[#EA4335] text-white ring-[#EA4335]/30",
 };
 
+// Lead pipeline stages — universal cycle used by the quick-status button on lead rows.
+export const LEAD_STAGES = ["New", "Contacted", "Qualified", "Proposal", "Negotiation", "Won", "Lost"] as const;
+export type LeadStage = typeof LEAD_STAGES[number];
+export const LEAD_STAGE_TONE: Record<LeadStage, string> = {
+  New: "bg-[#4285F4] text-white ring-[#4285F4]/30",
+  Contacted: "bg-[#5F6368] text-white ring-[#5F6368]/30",
+  Qualified: "bg-[#FBBC05] text-white ring-[#FBBC05]/30",
+  Proposal: "bg-[#FBBC05] text-white ring-[#FBBC05]/30",
+  Negotiation: "bg-[#F29900] text-white ring-[#F29900]/30",
+  Won: "bg-[#34A853] text-white ring-[#34A853]/30",
+  Lost: "bg-[#EA4335] text-white ring-[#EA4335]/30",
+};
+export type CallLog = { leadKey: string; name: string; phone: string; company: string; at: string };
+
 const nextIn = <T,>(arr: readonly T[], cur: T): T => {
   const i = arr.indexOf(cur);
   return arr[(i + 1) % arr.length];
@@ -44,6 +58,10 @@ export const nextInvoiceStatus = (s: InvoiceStatus) =>
   nextIn(["Draft", "Sent", "Paid", "Overdue"] as const, s);
 export const nextTaskStatus = (s: TaskStatus) =>
   nextIn(["Pending", "In Progress", "On Track", "Blocked"] as const, s);
+export const nextLeadStage = (s: string): LeadStage => {
+  const idx = LEAD_STAGES.indexOf(s as LeadStage);
+  return LEAD_STAGES[(idx === -1 ? 0 : idx + 1) % LEAD_STAGES.length];
+};
 
 // ------------ Initial data ------------
 const INIT_QUOTES: Quotation[] = [
@@ -93,6 +111,13 @@ type Store = {
   extraLeads: Record<string, ExtraLead[]>;
   addLead: (companyKey: string, l: ExtraLead) => void;
 
+  // lead stage quick-overrides + call logs
+  leadStages: Record<string, Record<string, LeadStage>>;
+  setLeadStage: (companyKey: string, leadKey: string, stage: LeadStage) => void;
+  cycleLeadStage: (companyKey: string, leadKey: string, current: string) => void;
+  callLogs: CallLog[];
+  logCall: (entry: Omit<CallLog, "at">) => void;
+
   // automations
   automations: AutomationItem[];
   toggleAutomation: (name: string) => void;
@@ -119,6 +144,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [automations, setAutomations] = useState<AutomationItem[]>(INIT_AUTOMATIONS);
   const [settings, setSettings] = useState<Record<string, CompanySettings>>({});
   const [unreadCount, setUnreadCount] = useState(3);
+  const [leadStages, setLeadStages] = useState<Record<string, Record<string, LeadStage>>>({});
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
 
   const value = useMemo<Store>(
     () => ({
@@ -157,6 +184,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       addLead: (k, l) =>
         setExtraLeads((prev) => ({ ...prev, [k]: [l, ...(prev[k] ?? [])] })),
 
+      leadStages,
+      setLeadStage: (k, leadKey, stage) =>
+        setLeadStages((prev) => ({ ...prev, [k]: { ...(prev[k] ?? {}), [leadKey]: stage } })),
+      cycleLeadStage: (k, leadKey, current) => {
+        const next = nextLeadStage(current);
+        setLeadStages((prev) => ({ ...prev, [k]: { ...(prev[k] ?? {}), [leadKey]: next } }));
+      },
+      callLogs,
+      logCall: (entry) =>
+        setCallLogs((prev) => [{ ...entry, at: new Date().toISOString() }, ...prev].slice(0, 200)),
+
       automations,
       toggleAutomation: (name) =>
         setAutomations((prev) =>
@@ -174,7 +212,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       bumpUnread: (n = 1) => setUnreadCount((c) => c + n),
       markAllRead: () => setUnreadCount(0),
     }),
-    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, automations, settings, unreadCount],
+    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, leadStages, callLogs, automations, settings, unreadCount],
   );
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

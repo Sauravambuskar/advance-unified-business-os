@@ -10,6 +10,9 @@ import {
   QUOTE_TONE,
   INV_TONE,
   TASK_TONE,
+  LEAD_STAGES,
+  LEAD_STAGE_TONE,
+  type LeadStage,
   type TaskStatus,
 } from "@/lib/app-store";
 import { toast } from "sonner";
@@ -46,6 +49,7 @@ import {
   DollarSign,
   Clock,
   Menu,
+  Phone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -818,19 +822,18 @@ function Dashboard() {
                             </td>
                             <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                             <td className="px-6 py-3.5">
-                              <span
-                                className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-none ring-1 ${l.stageTone}`}
-                              >
-                                {l.stage}
-                              </span>
+                              <QuickStageChip lead={l} companyKey={companyKey} />
                             </td>
                             <td className="px-6 py-3.5 text-xs text-zinc-500 max-w-[220px] truncate">
                               {l.message}
                             </td>
                             <td className="px-6 py-3.5 text-right">
-                              <button className="inline-flex size-7 items-center justify-center rounded-md hover:bg-zinc-100">
-                                <MoreHorizontal className="size-4 text-zinc-400" />
-                              </button>
+                              <div className="inline-flex items-center gap-1.5">
+                                <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
+                                <button className="inline-flex size-7 items-center justify-center rounded-md hover:bg-zinc-100">
+                                  <MoreHorizontal className="size-4 text-zinc-400" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1320,9 +1323,9 @@ function moduleBlurb(view: string) {
 function renderModuleBody(view: string, company: any, companyKey: string) {
   switch (view) {
     case "CRM":
-      return <CRMView company={company} />;
+      return <CRMView company={company} companyKey={companyKey} />;
     case "Lead Management":
-      return <LeadsView company={company} />;
+      return <LeadsView company={company} companyKey={companyKey} />;
     case "Sales Pipeline":
       return <PipelineView company={company} />;
     case "Quotations":
@@ -1353,6 +1356,74 @@ function renderModuleBody(view: string, company: any, companyKey: string) {
 }
 
 
+// Quick action controls attached to every lead row: one-tap call and one-tap
+// stage cycle. The intent is to update leads without opening the detail panel.
+function leadKeyOf(l: any) { return `${l.name}::${l.camp ?? ""}`; }
+
+function QuickCallButton({ lead, companyKey, companyName }: { lead: any; companyKey: string; companyName: string }) {
+  const store = useAppStore();
+  const key = leadKeyOf(lead);
+  const logs = store.callLogs.filter((c) => c.leadKey === key);
+  const last = logs[0];
+  const handle = () => {
+    store.logCall({ leadKey: key, name: lead.name, phone: lead.phone, company: companyName });
+    // Auto-advance New → Contacted so calling actually moves the lead forward.
+    const currentStage = store.leadStages[companyKey]?.[key] ?? lead.stage;
+    if (currentStage === "New") store.setLeadStage(companyKey, key, "Contacted");
+    toast.success(`Calling ${lead.name}`, { description: lead.phone });
+  };
+  return (
+    <a
+      href={`tel:${(lead.phone || "").replace(/[^+\d]/g, "")}`}
+      onClick={handle}
+      title={last ? `Last called ${new Date(last.at).toLocaleString()}` : `Call ${lead.name}`}
+      className="relative inline-flex size-8 items-center justify-center rounded-md bg-[#34A853] text-white hover:bg-[#2c8f46] transition-colors shadow-sm"
+      aria-label={`Call ${lead.name}`}
+    >
+      <Phone className="size-3.5" />
+      {logs.length > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-zinc-900 text-white text-[9px] font-bold grid place-items-center ring-2 ring-white">
+          {logs.length}
+        </span>
+      )}
+    </a>
+  );
+}
+
+function QuickStageChip({ lead, companyKey }: { lead: any; companyKey: string }) {
+  const store = useAppStore();
+  const key = leadKeyOf(lead);
+  const override = store.leadStages[companyKey]?.[key];
+  const isOverride = Boolean(override);
+  const stage = (override ?? lead.stage) as string;
+  const tone = isOverride && (LEAD_STAGES as readonly string[]).includes(stage)
+    ? LEAD_STAGE_TONE[stage as LeadStage]
+    : lead.stageTone;
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={() => store.cycleLeadStage(companyKey, key, stage)}
+        title="Click to advance stage"
+        className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-none ring-1 ${tone} hover:opacity-90`}
+      >
+        {stage}
+      </button>
+      <select
+        value={(LEAD_STAGES as readonly string[]).includes(stage) ? stage : ""}
+        onChange={(e) => store.setLeadStage(companyKey, key, e.target.value as LeadStage)}
+        className="text-[10px] bg-white border border-zinc-200 rounded px-1 py-0.5 text-zinc-600 hover:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+        aria-label="Set stage"
+      >
+        <option value="" disabled>Set…</option>
+        {LEAD_STAGES.map((s) => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+
 function Panel({ title, subtitle, children }: any) {
   return (
     <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
@@ -1367,9 +1438,9 @@ function Panel({ title, subtitle, children }: any) {
   );
 }
 
-function CRMView({ company }: any) {
+function CRMView({ company, companyKey }: any) {
   return (
-    <Panel title="Contacts & Accounts" subtitle="All customer records for this company">
+    <Panel title="Contacts & Accounts" subtitle="All customer records for this company · click phone to call, stage chip to advance">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -1379,6 +1450,7 @@ function CRMView({ company }: any) {
               <th className="px-6 py-3">Phone</th>
               <th className="px-6 py-3">Account</th>
               <th className="px-6 py-3">Stage</th>
+              <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-950/5">
@@ -1386,7 +1458,7 @@ function CRMView({ company }: any) {
               <tr key={l.name} className="hover:bg-zinc-50/60">
                 <td className="px-6 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-zinc-200`}>{l.initials}</div>
+                    <img src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`} alt={l.name} className="size-9 rounded-full object-cover ring-1 ring-zinc-200 shrink-0" />
                     <p className="text-sm font-medium">{l.name}</p>
                   </div>
                 </td>
@@ -1394,7 +1466,10 @@ function CRMView({ company }: any) {
                 <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                 <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${l.stageTone}`}>{l.stage}</span>
+                  <QuickStageChip lead={l} companyKey={companyKey} />
+                </td>
+                <td className="px-6 py-3.5 text-right">
+                  <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
                 </td>
               </tr>
             ))}
@@ -1792,14 +1867,14 @@ function LeadDetail({ lead, onUpdate, onBack }: {
   );
 }
 
-function LeadsView({ company }: any) {
+function LeadsView({ company, companyKey }: any) {
   const [leads, setLeads] = useState<FullLead[]>(() => seedLeads(company));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const companyKey = company.name as string;
-  const [lastKey, setLastKey] = useState(companyKey);
-  if (lastKey !== companyKey) {
-    setLastKey(companyKey);
+  const seedKey = company.name as string;
+  const [lastKey, setLastKey] = useState(seedKey);
+  if (lastKey !== seedKey) {
+    setLastKey(seedKey);
     setLeads(seedLeads(company));
     setSelectedId(null);
   }
@@ -1837,12 +1912,15 @@ function LeadsView({ company }: any) {
                 <th className="px-6 py-3">Phone</th>
                 <th className="px-6 py-3">Source</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right">Quick Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-950/5">
-              {leads.map((l) => (
-                <tr key={l.id} onClick={() => setSelectedId(l.id)} className="hover:bg-zinc-50/80 cursor-pointer">
-                  <td className="px-6 py-3.5">
+              {leads.map((l) => {
+                const rowLead = { name: l.name, camp: l.company, phone: l.phone, stage: l.status, stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" };
+                return (
+                <tr key={l.id} className="hover:bg-zinc-50/80">
+                  <td className="px-6 py-3.5 cursor-pointer" onClick={() => setSelectedId(l.id)}>
                     <div className="flex items-center gap-3">
                       <img src={l.avatar} alt={l.name} className="size-9 rounded-full ring-1 ring-zinc-200 bg-white object-cover" />
                       <div>
@@ -1851,15 +1929,27 @@ function LeadsView({ company }: any) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.company}</td>
+                  <td className="px-6 py-3.5 text-xs font-mono text-zinc-600 cursor-pointer" onClick={() => setSelectedId(l.id)}>{l.company}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-600">{l.source}</td>
                   <td className="px-6 py-3.5">
-                    <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 bg-amber-50 text-amber-700 ring-amber-200">{l.status}</span>
+                    <QuickStageChip lead={rowLead} companyKey={companyKey} />
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <div className="inline-flex items-center gap-1.5">
+                      <QuickCallButton lead={rowLead} companyKey={companyKey} companyName={company.name} />
+                      <button
+                        onClick={() => setSelectedId(l.id)}
+                        className="inline-flex h-8 items-center px-2 rounded-md text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
+                      >
+                        Open
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
