@@ -1868,14 +1868,14 @@ function LeadDetail({ lead, onUpdate, onBack }: {
   );
 }
 
-function LeadsView({ company }: any) {
+function LeadsView({ company, companyKey }: any) {
   const [leads, setLeads] = useState<FullLead[]>(() => seedLeads(company));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const companyKey = company.name as string;
-  const [lastKey, setLastKey] = useState(companyKey);
-  if (lastKey !== companyKey) {
-    setLastKey(companyKey);
+  const seedKey = company.name as string;
+  const [lastKey, setLastKey] = useState(seedKey);
+  if (lastKey !== seedKey) {
+    setLastKey(seedKey);
     setLeads(seedLeads(company));
     setSelectedId(null);
   }
