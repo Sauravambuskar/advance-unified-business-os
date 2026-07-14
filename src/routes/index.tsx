@@ -823,19 +823,18 @@ function Dashboard() {
                             </td>
                             <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                             <td className="px-6 py-3.5">
-                              <span
-                                className={`inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-none ring-1 ${l.stageTone}`}
-                              >
-                                {l.stage}
-                              </span>
+                              <QuickStageChip lead={l} companyKey={companyKey} />
                             </td>
                             <td className="px-6 py-3.5 text-xs text-zinc-500 max-w-[220px] truncate">
                               {l.message}
                             </td>
                             <td className="px-6 py-3.5 text-right">
-                              <button className="inline-flex size-7 items-center justify-center rounded-md hover:bg-zinc-100">
-                                <MoreHorizontal className="size-4 text-zinc-400" />
-                              </button>
+                              <div className="inline-flex items-center gap-1.5">
+                                <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
+                                <button className="inline-flex size-7 items-center justify-center rounded-md hover:bg-zinc-100">
+                                  <MoreHorizontal className="size-4 text-zinc-400" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
