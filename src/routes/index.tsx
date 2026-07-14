@@ -10,6 +10,9 @@ import {
   QUOTE_TONE,
   INV_TONE,
   TASK_TONE,
+  LEAD_STAGES,
+  LEAD_STAGE_TONE,
+  type LeadStage,
   type TaskStatus,
 } from "@/lib/app-store";
 import { toast } from "sonner";
