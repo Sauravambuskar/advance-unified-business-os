@@ -184,6 +184,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       addLead: (k, l) =>
         setExtraLeads((prev) => ({ ...prev, [k]: [l, ...(prev[k] ?? [])] })),
 
+      leadStages,
+      setLeadStage: (k, leadKey, stage) =>
+        setLeadStages((prev) => ({ ...prev, [k]: { ...(prev[k] ?? {}), [leadKey]: stage } })),
+      cycleLeadStage: (k, leadKey, current) => {
+        const next = nextLeadStage(current);
+        setLeadStages((prev) => ({ ...prev, [k]: { ...(prev[k] ?? {}), [leadKey]: next } }));
+      },
+      callLogs,
+      logCall: (entry) =>
+        setCallLogs((prev) => [{ ...entry, at: new Date().toISOString() }, ...prev].slice(0, 200)),
+
       automations,
       toggleAutomation: (name) =>
         setAutomations((prev) =>
@@ -201,7 +212,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       bumpUnread: (n = 1) => setUnreadCount((c) => c + n),
       markAllRead: () => setUnreadCount(0),
     }),
-    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, automations, settings, unreadCount],
+    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, leadStages, callLogs, automations, settings, unreadCount],
   );
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
