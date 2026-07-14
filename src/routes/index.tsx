@@ -1439,9 +1439,9 @@ function Panel({ title, subtitle, children }: any) {
   );
 }
 
-function CRMView({ company }: any) {
+function CRMView({ company, companyKey }: any) {
   return (
-    <Panel title="Contacts & Accounts" subtitle="All customer records for this company">
+    <Panel title="Contacts & Accounts" subtitle="All customer records for this company · click phone to call, stage chip to advance">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -1451,6 +1451,7 @@ function CRMView({ company }: any) {
               <th className="px-6 py-3">Phone</th>
               <th className="px-6 py-3">Account</th>
               <th className="px-6 py-3">Stage</th>
+              <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-950/5">
@@ -1458,7 +1459,7 @@ function CRMView({ company }: any) {
               <tr key={l.name} className="hover:bg-zinc-50/60">
                 <td className="px-6 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className={`size-9 rounded-full ${l.tone} grid place-items-center text-xs font-semibold ring-1 ring-zinc-200`}>{l.initials}</div>
+                    <img src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`} alt={l.name} className="size-9 rounded-full object-cover ring-1 ring-zinc-200 shrink-0" />
                     <p className="text-sm font-medium">{l.name}</p>
                   </div>
                 </td>
@@ -1466,7 +1467,10 @@ function CRMView({ company }: any) {
                 <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                 <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
                 <td className="px-6 py-3.5">
-                  <span className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${l.stageTone}`}>{l.stage}</span>
+                  <QuickStageChip lead={l} companyKey={companyKey} />
+                </td>
+                <td className="px-6 py-3.5 text-right">
+                  <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
                 </td>
               </tr>
             ))}
