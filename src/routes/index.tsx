@@ -1913,12 +1913,15 @@ function LeadsView({ company, companyKey }: any) {
                 <th className="px-6 py-3">Phone</th>
                 <th className="px-6 py-3">Source</th>
                 <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right">Quick Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-950/5">
-              {leads.map((l) => (
-                <tr key={l.id} onClick={() => setSelectedId(l.id)} className="hover:bg-zinc-50/80 cursor-pointer">
-                  <td className="px-6 py-3.5">
+              {leads.map((l) => {
+                const rowLead = { name: l.name, camp: l.company, phone: l.phone, stage: l.status, stageTone: "bg-[#FBBC05] text-white ring-[#FBBC05]/30" };
+                return (
+                <tr key={l.id} className="hover:bg-zinc-50/80">
+                  <td className="px-6 py-3.5 cursor-pointer" onClick={() => setSelectedId(l.id)}>
                     <div className="flex items-center gap-3">
                       <img src={l.avatar} alt={l.name} className="size-9 rounded-full ring-1 ring-zinc-200 bg-white object-cover" />
                       <div>
@@ -1927,15 +1930,27 @@ function LeadsView({ company, companyKey }: any) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.company}</td>
+                  <td className="px-6 py-3.5 text-xs font-mono text-zinc-600 cursor-pointer" onClick={() => setSelectedId(l.id)}>{l.company}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-600">{l.source}</td>
                   <td className="px-6 py-3.5">
-                    <span className="inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 bg-amber-50 text-amber-700 ring-amber-200">{l.status}</span>
+                    <QuickStageChip lead={rowLead} companyKey={companyKey} />
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <div className="inline-flex items-center gap-1.5">
+                      <QuickCallButton lead={rowLead} companyKey={companyKey} companyName={company.name} />
+                      <button
+                        onClick={() => setSelectedId(l.id)}
+                        className="inline-flex h-8 items-center px-2 rounded-md text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
+                      >
+                        Open
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
