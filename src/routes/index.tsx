@@ -49,6 +49,8 @@ import {
   DollarSign,
   Clock,
   Menu,
+  Phone,
+  PhoneCall,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
