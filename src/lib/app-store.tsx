@@ -144,6 +144,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [automations, setAutomations] = useState<AutomationItem[]>(INIT_AUTOMATIONS);
   const [settings, setSettings] = useState<Record<string, CompanySettings>>({});
   const [unreadCount, setUnreadCount] = useState(3);
+  const [leadStages, setLeadStages] = useState<Record<string, Record<string, LeadStage>>>({});
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
 
   const value = useMemo<Store>(
     () => ({
