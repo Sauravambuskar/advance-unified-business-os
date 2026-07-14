@@ -1324,9 +1324,9 @@ function moduleBlurb(view: string) {
 function renderModuleBody(view: string, company: any, companyKey: string) {
   switch (view) {
     case "CRM":
-      return <CRMView company={company} />;
+      return <CRMView company={company} companyKey={companyKey} />;
     case "Lead Management":
-      return <LeadsView company={company} />;
+      return <LeadsView company={company} companyKey={companyKey} />;
     case "Sales Pipeline":
       return <PipelineView company={company} />;
     case "Quotations":
