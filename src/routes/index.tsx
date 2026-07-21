@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AskAi } from "@/components/ask-ai-panel";
+import { CallDialog } from "@/components/call-dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   AppStoreProvider,
@@ -1362,31 +1363,43 @@ function leadKeyOf(l: any) { return `${l.name}::${l.camp ?? ""}`; }
 
 function QuickCallButton({ lead, companyKey, companyName }: { lead: any; companyKey: string; companyName: string }) {
   const store = useAppStore();
+  const [open, setOpen] = useState(false);
   const key = leadKeyOf(lead);
   const logs = store.callLogs.filter((c) => c.leadKey === key);
   const last = logs[0];
-  const handle = () => {
+  const handle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     store.logCall({ leadKey: key, name: lead.name, phone: lead.phone, company: companyName });
-    // Auto-advance New → Contacted so calling actually moves the lead forward.
     const currentStage = store.leadStages[companyKey]?.[key] ?? lead.stage;
     if (currentStage === "New") store.setLeadStage(companyKey, key, "Contacted");
     toast.success(`Calling ${lead.name}`, { description: lead.phone });
+    setOpen(true);
   };
   return (
-    <a
-      href={`tel:${(lead.phone || "").replace(/[^+\d]/g, "")}`}
-      onClick={handle}
-      title={last ? `Last called ${new Date(last.at).toLocaleString()}` : `Call ${lead.name}`}
-      className="relative inline-flex size-8 items-center justify-center rounded-md bg-[#34A853] text-white hover:bg-[#2c8f46] transition-colors shadow-sm"
-      aria-label={`Call ${lead.name}`}
-    >
-      <Phone className="size-3.5" />
-      {logs.length > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-zinc-900 text-white text-[9px] font-bold grid place-items-center ring-2 ring-white">
-          {logs.length}
-        </span>
-      )}
-    </a>
+    <>
+      <button
+        onClick={handle}
+        title={last ? `Last called ${new Date(last.at).toLocaleString()}` : `Call ${lead.name}`}
+        className="relative inline-flex size-8 items-center justify-center rounded-md bg-[#34A853] text-white hover:bg-[#2c8f46] transition-colors shadow-sm"
+        aria-label={`Call ${lead.name}`}
+      >
+        <Phone className="size-3.5" />
+        {logs.length > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-zinc-900 text-white text-[9px] font-bold grid place-items-center ring-2 ring-white">
+            {logs.length}
+          </span>
+        )}
+      </button>
+      <CallDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        name={lead.name}
+        phone={lead.phone || "+91 00000 00000"}
+        company={companyName}
+        photo={lead.photo || lead.avatar}
+      />
+    </>
   );
 }
 
