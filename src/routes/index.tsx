@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AskAi } from "@/components/ask-ai-panel";
+import { CallDialog } from "@/components/call-dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   AppStoreProvider,
