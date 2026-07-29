@@ -181,7 +181,7 @@ export function CallDialog({
         </div>
 
         {/* RIGHT: Transcription + AI */}
-        <div className="flex flex-col bg-zinc-50 border-l border-zinc-200">
+        <div className="flex flex-col min-h-0 overflow-hidden bg-zinc-50 border-l border-zinc-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-white">
             <div className="flex items-center gap-2">
               <MessageSquare className="size-4 text-zinc-700" />
