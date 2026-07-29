@@ -164,7 +164,7 @@ export function CallDialog({
             )}
           </div>
 
-          <div className="px-6 pb-6 pt-2 grid grid-cols-5 gap-3">
+          <div className="shrink-0 px-6 pb-6 pt-2 grid grid-cols-5 gap-3 bg-gradient-to-t from-[#0f3460] to-transparent">
             <CallCtrl icon={muted ? MicOff : Mic} label={muted ? "Unmute" : "Mute"} active={muted} onClick={() => setMuted((m) => !m)} />
             <CallCtrl icon={held ? Play : Pause} label={held ? "Resume" : "Hold"} active={held} onClick={() => setHeld((h) => !h)} />
             <CallCtrl icon={speaker ? Volume2 : VolumeX} label="Speaker" active={!speaker} onClick={() => setSpeaker((s) => !s)} />
