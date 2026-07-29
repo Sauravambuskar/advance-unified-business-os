@@ -600,6 +600,7 @@ function Dashboard() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <HeaderDialer companyKey={companyKey} companyName={baseCompany.name} />
             <AskAi snapshot={snapshot} />
             <button className="hidden lg:flex items-center gap-1.5 text-sm text-zinc-600 font-medium px-3 py-2 rounded-lg hover:bg-zinc-50">
               English <ChevronDown className="size-3.5" />
