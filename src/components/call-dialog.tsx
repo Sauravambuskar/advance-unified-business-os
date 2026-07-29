@@ -116,9 +116,9 @@ export function CallDialog({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-zinc-950/70 backdrop-blur-sm">
       <div className="absolute inset-0" onClick={hangup} aria-hidden />
-      <div className="relative w-full max-w-5xl h-[92vh] sm:h-[86vh] bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative w-full max-w-5xl h-[92vh] sm:h-[86vh] bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] grid-rows-[minmax(0,1fr)] lg:grid-rows-1">
         {/* LEFT: Call panel */}
-        <div className="relative bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] text-white flex flex-col">
+        <div className="relative bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] text-white flex flex-col min-h-0 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/70">
               <span className={`inline-block size-2 rounded-full ${phase === "connected" ? "bg-[#34A853] animate-pulse" : phase === "dialing" ? "bg-[#FBBC05] animate-pulse" : "bg-[#EA4335]"}`} />
