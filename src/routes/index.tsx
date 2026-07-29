@@ -1397,7 +1397,7 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
         name={lead.name}
         phone={lead.phone || "+91 00000 00000"}
         company={companyName}
-        photo={lead.photo || lead.avatar}
+        photo={lead.photo || lead.avatar || `https://i.pravatar.cc/240?u=${encodeURIComponent(lead.name)}`}
       />
     </>
   );
