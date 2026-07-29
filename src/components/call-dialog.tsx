@@ -129,7 +129,7 @@ export function CallDialog({
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-4">
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin flex flex-col items-center justify-center px-6 py-8 gap-4">
             <div className="relative">
               <div className={`absolute inset-0 rounded-full ${phase === "dialing" ? "animate-ping bg-white/20" : ""}`} />
               {photo ? (
