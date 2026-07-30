@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Phone, PhoneCall, Delete, X, UserPlus, Users as UsersIcon } from "lucide-react";
 import { CallDialog } from "@/components/call-dialog";
-import { useAppStore } from "@/lib/app-store";
+import { useAppStore, type CallDisposition } from "@/lib/app-store";
 import { toast } from "sonner";
 
 type SaveKind = "Lead" | "Customer";
@@ -28,6 +28,7 @@ export function HeaderDialer({
   const [saveKind, setSaveKind] = useState<SaveKind>("Lead");
   const [saveName, setSaveName] = useState("");
   const [saveNote, setSaveNote] = useState("");
+  const [lastDisposition, setLastDisposition] = useState("");
 
   const displayName = () =>
     number.trim() ? `Unknown · ${number.trim()}` : "Unknown";
@@ -57,9 +58,72 @@ export function HeaderDialer({
     // After the call ends, auto-open the save prompt so the conversation
     // is captured against a Lead or Customer record automatically.
     setSaveName("");
-    setSaveNote("");
+    setSaveNote(lastDisposition ? `Disposition: ${lastDisposition}` : "");
     setSaveKind("Lead");
     setSavePromptOpen(true);
+  };
+
+  const handleDisposition = (disposition: string, note: string, duration: number) => {
+    const leadKey = `dialer::${pendingNumber}`;
+    setLastDisposition(disposition);
+
+    // Update call log with disposition
+    const lastLog = store.callLogs.find((c) => c.leadKey === leadKey);
+    if (lastLog) {
+      store.updateCallDisposition(leadKey, lastLog.at, disposition as CallDisposition, note);
+    }
+
+    // Run call automations
+    const enabledRules = store.callRules.filter((r) => r.enabled);
+
+    enabledRules.forEach((rule) => {
+      if (rule.trigger === "after_call") {
+        if (rule.action === "create_task") {
+          store.addTask(companyKey, {
+            name: `Follow up: ${pendingNumber}`,
+            owner: "You",
+            due: "Tomorrow",
+            status: "Pending",
+          });
+          toast.success("Auto-created follow-up task");
+        }
+        if (rule.action === "send_sms" && rule.config.disposition === disposition) {
+          const msg = (rule.config.template || "Thanks for your time!")
+            .replace("{name}", pendingNumber)
+            .replace("{company}", companyName);
+          toast.success("WhatsApp sent", { description: msg.slice(0, 60) + "…" });
+        }
+      }
+      if (rule.trigger === "no_answer" && disposition === "No Answer") {
+        if (rule.action === "schedule_callback") {
+          const delayHrs = parseInt(rule.config.delayHours || "4", 10);
+          store.scheduleCallback({
+            leadKey,
+            name: `Unknown · ${pendingNumber}`,
+            phone: pendingNumber,
+            company: companyName,
+            scheduledAt: new Date(Date.now() + delayHrs * 3600000).toISOString(),
+            note: rule.config.note || `Auto-scheduled: no answer`,
+          });
+          toast.success("Callback scheduled", { description: `${pendingNumber} in ${delayHrs}h` });
+        }
+      }
+    });
+
+    // Auto-schedule callback if disposition is "Callback Scheduled"
+    if (disposition === "Callback Scheduled") {
+      store.scheduleCallback({
+        leadKey,
+        name: `Unknown · ${pendingNumber}`,
+        phone: pendingNumber,
+        company: companyName,
+        scheduledAt: new Date(Date.now() + 24 * 3600000).toISOString(),
+        note: note || "Callback requested",
+      });
+      toast.success("Callback scheduled for tomorrow");
+    }
+
+    store.bumpUnread();
   };
 
   const saveContact = () => {
@@ -168,6 +232,7 @@ export function HeaderDialer({
         name={displayName()}
         phone={pendingNumber || number || "+91 00000 00000"}
         company={companyName}
+        onDisposition={handleDisposition}
       />
 
       {/* Save-as prompt after hangup */}
