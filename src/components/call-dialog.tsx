@@ -277,7 +277,7 @@ export function CallDialog({
   phone: string;
   company: string;
   photo?: string;
-  onDisposition?: (disposition: string, note: string, duration: number, temperature: string) => void;
+  onDisposition?: (disposition: string, note: string, duration: number, temperature: string, callbackHours: number | null) => void;
 }) {
   const [phase, setPhase] = useState<"dialing" | "connected" | "ended">("dialing");
   const [seconds, setSeconds] = useState(0);
@@ -289,6 +289,7 @@ export function CallDialog({
   const [disposition, setDisposition] = useState("");
   const [callNote, setCallNote] = useState("");
   const [leadTemp, setLeadTemp] = useState("");
+  const [callbackTime, setCallbackTime] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
   const audioRef = useRef<CallAudioSession | null>(null);
@@ -416,24 +417,25 @@ export function CallDialog({
 
   const submitDisposition = () => {
     if (onDisposition) {
-      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm");
+      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", callbackTime);
     }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
     setLeadTemp("");
+    setCallbackTime(null);
     onClose();
   };
 
   const skipDisposition = () => {
-    // Even on skip, log basic disposition if available
-    if (onDisposition && disposition) {
-      onDisposition(disposition, callNote, seconds, leadTemp || "Warm");
+    if (onDisposition && (disposition || leadTemp)) {
+      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", callbackTime);
     }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
     setLeadTemp("");
+    setCallbackTime(null);
     onClose();
   };
 
@@ -638,116 +640,60 @@ export function CallDialog({
   // Disposition overlay (shown after hangup)
   const dispositionPanel = showDisposition ? (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50 sticky top-0">
-          <p className="text-sm font-semibold">Call Ended · Log Outcome</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {phone} · Duration: {fmt(seconds)}</p>
+      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
+        <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50">
+          <p className="text-sm font-semibold">Log Call Outcome</p>
+          <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {fmt(seconds)}</p>
         </div>
-        <div className="p-5 space-y-4">
-          {/* Lead Temperature — Hot/Warm/Cold */}
-          <div>
-            <p className="text-xs font-semibold text-zinc-600 mb-2">Lead Quality</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setLeadTemp("Hot")}
-                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                  leadTemp === "Hot"
-                    ? "bg-red-500 text-white ring-2 ring-red-500/30"
-                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-red-50 hover:ring-red-200"
-                }`}
-              >
-                🔥 Hot
-              </button>
-              <button
-                onClick={() => setLeadTemp("Warm")}
-                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                  leadTemp === "Warm"
-                    ? "bg-amber-500 text-white ring-2 ring-amber-500/30"
-                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-amber-50 hover:ring-amber-200"
-                }`}
-              >
-                ☀️ Warm
-              </button>
-              <button
-                onClick={() => setLeadTemp("Cold")}
-                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                  leadTemp === "Cold"
-                    ? "bg-blue-500 text-white ring-2 ring-blue-500/30"
-                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-blue-50 hover:ring-blue-200"
-                }`}
-              >
-                ❄️ Cold
-              </button>
-            </div>
+        <div className="p-4 space-y-3">
+          {/* Lead Temperature */}
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => setLeadTemp("Hot")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Hot" ? "bg-red-500 text-white" : "ring-1 ring-zinc-200 hover:bg-red-50"}`}>🔥 Hot</button>
+            <button onClick={() => setLeadTemp("Warm")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Warm" ? "bg-amber-500 text-white" : "ring-1 ring-zinc-200 hover:bg-amber-50"}`}>☀️ Warm</button>
+            <button onClick={() => setLeadTemp("Cold")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Cold" ? "bg-blue-500 text-white" : "ring-1 ring-zinc-200 hover:bg-blue-50"}`}>❄️ Cold</button>
           </div>
 
-          {/* Call Disposition */}
-          <div>
-            <p className="text-xs font-semibold text-zinc-600 mb-2">Call Disposition</p>
-            <div className="grid grid-cols-2 gap-2">
-              {["Interested", "Not Interested", "Follow Up", "No Answer", "Voicemail", "Callback Scheduled", "Wrong Number"].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDisposition(d)}
-                  className={`text-xs font-medium px-3 py-2.5 rounded-lg ring-1 transition-colors ${
-                    disposition === d
-                      ? "bg-zinc-900 text-white ring-zinc-900"
-                      : "bg-white ring-zinc-200 text-zinc-700 hover:bg-zinc-50"
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
+          {/* Disposition */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {["Interested", "Follow Up", "No Answer", "Not Interested", "Voicemail", "Wrong Number"].map((d) => (
+              <button key={d} onClick={() => setDisposition(d)} className={`text-[11px] font-medium px-2 py-2 rounded-lg ring-1 ${disposition === d ? "bg-zinc-900 text-white ring-zinc-900" : "ring-zinc-200 hover:bg-zinc-50"}`}>{d}</button>
+            ))}
           </div>
 
-          {/* Next Action — quick shortcut */}
-          <div>
-            <p className="text-xs font-semibold text-zinc-600 mb-2">Next Action</p>
-            <div className="grid grid-cols-3 gap-2">
+          {/* Schedule Callback — always visible */}
+          <div className="rounded-lg ring-1 ring-zinc-200 p-3 space-y-2 bg-zinc-50/50">
+            <p className="text-[11px] font-semibold text-zinc-700">📞 Schedule Callback</p>
+            <div className="grid grid-cols-4 gap-1.5">
               {[
-                { label: "Follow up tomorrow", icon: "📅" },
-                { label: "Send proposal", icon: "📄" },
-                { label: "Schedule meeting", icon: "🤝" },
-              ].map((a) => (
+                { label: "1hr", hours: 1 },
+                { label: "4hr", hours: 4 },
+                { label: "Tomorrow", hours: 24 },
+                { label: "3 days", hours: 72 },
+              ].map((opt) => (
                 <button
-                  key={a.label}
-                  onClick={() => setCallNote((prev) => prev ? `${prev}\nNext: ${a.label}` : `Next: ${a.label}`)}
-                  className="text-[11px] font-medium px-2 py-2 rounded-lg ring-1 ring-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-center"
+                  key={opt.label}
+                  onClick={() => setCallbackTime(opt.hours)}
+                  className={`text-[10px] font-semibold py-1.5 rounded-md ${callbackTime === opt.hours ? "bg-violet-600 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-violet-50"}`}
                 >
-                  <span className="block text-base mb-0.5">{a.icon}</span>
-                  {a.label}
+                  {opt.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Call Note */}
-          <div>
-            <p className="text-xs font-semibold text-zinc-600 mb-1">Call Note</p>
-            <textarea
-              value={callNote}
-              onChange={(e) => setCallNote(e.target.value)}
-              placeholder="Quick summary of what was discussed…"
-              rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
-            />
-          </div>
+          {/* Note */}
+          <textarea
+            value={callNote}
+            onChange={(e) => setCallNote(e.target.value)}
+            placeholder="Call note (optional)"
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
+          />
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={skipDisposition}
-              className="flex-1 h-10 rounded-lg ring-1 ring-zinc-200 text-sm font-semibold hover:bg-zinc-50"
-            >
-              Skip
-            </button>
-            <button
-              onClick={submitDisposition}
-              className="flex-1 h-10 rounded-lg bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800"
-            >
-              Save & Close
-            </button>
+          <div className="flex gap-2">
+            <button onClick={skipDisposition} className="flex-1 h-9 rounded-lg ring-1 ring-zinc-200 text-xs font-semibold hover:bg-zinc-50">Skip</button>
+            <button onClick={submitDisposition} className="flex-1 h-9 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800">Save</button>
           </div>
         </div>
       </div>

@@ -1404,11 +1404,24 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
     setOpen(true);
   };
 
-  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string) => {
+  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string, callbackHours: number | null) => {
     // Update the last call log with disposition and temperature
     const lastLog = store.callLogs.find((c) => c.leadKey === key);
     if (lastLog) {
       store.updateCallDisposition(key, lastLog.at, disposition as CallDisposition, note, temperature as "Hot" | "Warm" | "Cold");
+    }
+
+    // Schedule callback if user selected a time
+    if (callbackHours) {
+      store.scheduleCallback({
+        leadKey: key,
+        name: lead.name,
+        phone: lead.phone,
+        company: companyName,
+        scheduledAt: new Date(Date.now() + callbackHours * 3600000).toISOString(),
+        note: note || `Callback in ${callbackHours}h`,
+      });
+      toast.success("Callback scheduled", { description: `${lead.name} in ${callbackHours}h` });
     }
 
     // Run call automations based on disposition
@@ -1453,19 +1466,6 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
         }
       }
     });
-
-    // Auto-schedule callback if disposition is "Callback Scheduled"
-    if (disposition === "Callback Scheduled") {
-      store.scheduleCallback({
-        leadKey: key,
-        name: lead.name,
-        phone: lead.phone,
-        company: companyName,
-        scheduledAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-        note: note || "Callback requested by lead",
-      });
-      toast.success("Callback scheduled for tomorrow");
-    }
 
     store.bumpUnread();
   };

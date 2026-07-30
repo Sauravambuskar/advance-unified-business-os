@@ -63,7 +63,7 @@ export function HeaderDialer({
     setSavePromptOpen(true);
   };
 
-  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string) => {
+  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string, callbackHours: number | null) => {
     const leadKey = `dialer::${pendingNumber}`;
     setLastDisposition(`${disposition} · ${temperature}`);
 
@@ -71,6 +71,19 @@ export function HeaderDialer({
     const lastLog = store.callLogs.find((c) => c.leadKey === leadKey);
     if (lastLog) {
       store.updateCallDisposition(leadKey, lastLog.at, disposition as CallDisposition, note, temperature as "Hot" | "Warm" | "Cold");
+    }
+
+    // Schedule callback if user selected a time
+    if (callbackHours) {
+      store.scheduleCallback({
+        leadKey,
+        name: `Unknown · ${pendingNumber}`,
+        phone: pendingNumber,
+        company: companyName,
+        scheduledAt: new Date(Date.now() + callbackHours * 3600000).toISOString(),
+        note: note || `Callback in ${callbackHours}h`,
+      });
+      toast.success("Callback scheduled", { description: `${pendingNumber} in ${callbackHours}h` });
     }
 
     // Run call automations
@@ -94,7 +107,7 @@ export function HeaderDialer({
           toast.success("WhatsApp sent", { description: msg.slice(0, 60) + "…" });
         }
       }
-      if (rule.trigger === "no_answer" && disposition === "No Answer") {
+      if (rule.trigger === "no_answer" && disposition === "No Answer" && !callbackHours) {
         if (rule.action === "schedule_callback") {
           const delayHrs = parseInt(rule.config.delayHours || "4", 10);
           store.scheduleCallback({
@@ -105,23 +118,10 @@ export function HeaderDialer({
             scheduledAt: new Date(Date.now() + delayHrs * 3600000).toISOString(),
             note: rule.config.note || `Auto-scheduled: no answer`,
           });
-          toast.success("Callback scheduled", { description: `${pendingNumber} in ${delayHrs}h` });
+          toast.success("Callback auto-scheduled", { description: `${pendingNumber} in ${delayHrs}h` });
         }
       }
     });
-
-    // Auto-schedule callback if disposition is "Callback Scheduled"
-    if (disposition === "Callback Scheduled") {
-      store.scheduleCallback({
-        leadKey,
-        name: `Unknown · ${pendingNumber}`,
-        phone: pendingNumber,
-        company: companyName,
-        scheduledAt: new Date(Date.now() + 24 * 3600000).toISOString(),
-        note: note || "Callback requested",
-      });
-      toast.success("Callback scheduled for tomorrow");
-    }
 
     store.bumpUnread();
   };
