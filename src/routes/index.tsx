@@ -1404,11 +1404,11 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
     setOpen(true);
   };
 
-  const handleDisposition = (disposition: string, note: string, duration: number) => {
-    // Update the last call log with disposition
+  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string) => {
+    // Update the last call log with disposition and temperature
     const lastLog = store.callLogs.find((c) => c.leadKey === key);
     if (lastLog) {
-      store.updateCallDisposition(key, lastLog.at, disposition as CallDisposition, note);
+      store.updateCallDisposition(key, lastLog.at, disposition as CallDisposition, note, temperature as "Hot" | "Warm" | "Cold");
     }
 
     // Run call automations based on disposition
@@ -1418,9 +1418,9 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
       if (rule.trigger === "after_call") {
         if (rule.action === "create_task") {
           store.addTask(companyKey, {
-            name: `Follow up: ${lead.name}`,
+            name: `Follow up: ${lead.name} [${temperature}]`,
             owner: "You",
-            due: "Tomorrow",
+            due: temperature === "Hot" ? "Today" : "Tomorrow",
             status: "Pending",
           });
           toast.success("Auto-created follow-up task", { description: lead.name });
@@ -1995,9 +1995,75 @@ function LeadDetail({ lead, onUpdate, onBack }: {
               </div>
             </Panel>
           </div>
+
+          <CallHistoryPanel leadName={lead.name} leadCompany={lead.company} />
         </>
       )}
     </div>
+  );
+}
+
+// ─── Call History Panel (per-lead) ────────────────────────────────────────
+function CallHistoryPanel({ leadName, leadCompany }: { leadName: string; leadCompany: string }) {
+  const store = useAppStore();
+  // Match call logs by name (handles both lead keys like "Name::Camp" and dialer keys)
+  const logs = store.callLogs.filter((c) =>
+    c.name.includes(leadName) || c.leadKey.includes(leadName)
+  );
+
+  const TEMP_BADGE: Record<string, string> = {
+    Hot: "bg-red-100 text-red-700",
+    Warm: "bg-amber-100 text-amber-700",
+    Cold: "bg-blue-100 text-blue-700",
+  };
+
+  return (
+    <Panel title="Call History" subtitle={`${logs.length} call${logs.length !== 1 ? "s" : ""} recorded for this lead`}>
+      <div className="p-6">
+        {logs.length === 0 ? (
+          <div className="text-center py-6">
+            <Phone className="size-8 text-zinc-300 mx-auto mb-2" />
+            <p className="text-xs text-zinc-400 italic">No calls recorded yet</p>
+            <p className="text-[10px] text-zinc-400 mt-1">Use the call button to start logging calls for this lead</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {logs.map((log, i) => (
+              <div key={i} className="rounded-lg ring-1 ring-zinc-200 p-3 hover:bg-zinc-50/50">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-full bg-emerald-100 grid place-items-center shrink-0">
+                      <Phone className="size-3.5 text-emerald-700" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold">{log.phone}</p>
+                      <p className="text-[10px] text-zinc-500">
+                        {new Date(log.at).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {log.temperature && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${TEMP_BADGE[log.temperature] ?? "bg-zinc-100 text-zinc-600"}`}>
+                        {log.temperature === "Hot" ? "🔥" : log.temperature === "Cold" ? "❄️" : "☀️"} {log.temperature}
+                      </span>
+                    )}
+                    {log.disposition && (
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ring-1 ${(DISPOSITION_TONE as any)[log.disposition] ?? "bg-zinc-100 text-zinc-700 ring-zinc-200"}`}>
+                        {log.disposition}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {log.note && (
+                  <p className="text-[11px] text-zinc-600 mt-2 pl-10">{log.note}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Panel>
   );
 }
 
@@ -3093,7 +3159,13 @@ function AutomationsView() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{log.name}</p>
                     <p className="text-[11px] text-zinc-500">{log.phone} · {log.company}</p>
+                    {log.note && <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{log.note}</p>}
                   </div>
+                  {log.temperature && (
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${log.temperature === "Hot" ? "bg-red-100 text-red-700" : log.temperature === "Cold" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                      {log.temperature === "Hot" ? "🔥" : log.temperature === "Cold" ? "❄️" : "☀️"} {log.temperature}
+                    </span>
+                  )}
                   {log.disposition && (
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ring-1 ${(DISPOSITION_TONE as any)[log.disposition] ?? "bg-zinc-100 text-zinc-700 ring-zinc-200"}`}>
                       {log.disposition}

@@ -63,14 +63,14 @@ export function HeaderDialer({
     setSavePromptOpen(true);
   };
 
-  const handleDisposition = (disposition: string, note: string, duration: number) => {
+  const handleDisposition = (disposition: string, note: string, duration: number, temperature: string) => {
     const leadKey = `dialer::${pendingNumber}`;
-    setLastDisposition(disposition);
+    setLastDisposition(`${disposition} · ${temperature}`);
 
-    // Update call log with disposition
+    // Update call log with disposition and temperature
     const lastLog = store.callLogs.find((c) => c.leadKey === leadKey);
     if (lastLog) {
-      store.updateCallDisposition(leadKey, lastLog.at, disposition as CallDisposition, note);
+      store.updateCallDisposition(leadKey, lastLog.at, disposition as CallDisposition, note, temperature as "Hot" | "Warm" | "Cold");
     }
 
     // Run call automations
@@ -80,9 +80,9 @@ export function HeaderDialer({
       if (rule.trigger === "after_call") {
         if (rule.action === "create_task") {
           store.addTask(companyKey, {
-            name: `Follow up: ${pendingNumber}`,
+            name: `Follow up: ${pendingNumber} [${temperature}]`,
             owner: "You",
-            due: "Tomorrow",
+            due: temperature === "Hot" ? "Today" : "Tomorrow",
             status: "Pending",
           });
           toast.success("Auto-created follow-up task");

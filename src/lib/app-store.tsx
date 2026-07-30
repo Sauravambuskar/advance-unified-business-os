@@ -70,7 +70,7 @@ export const LEAD_STAGE_TONE: Record<LeadStage, string> = {
   Won: "bg-[#34A853] text-white ring-[#34A853]/30",
   Lost: "bg-[#EA4335] text-white ring-[#EA4335]/30",
 };
-export type CallLog = { leadKey: string; name: string; phone: string; company: string; at: string; duration?: number; disposition?: CallDisposition; note?: string };
+export type CallLog = { leadKey: string; name: string; phone: string; company: string; at: string; duration?: number; disposition?: CallDisposition; note?: string; temperature?: "Hot" | "Warm" | "Cold" };
 
 const nextIn = <T,>(arr: readonly T[], cur: T): T => {
   const i = arr.indexOf(cur);
@@ -157,7 +157,7 @@ type Store = {
   cycleLeadStage: (companyKey: string, leadKey: string, current: string) => void;
   callLogs: CallLog[];
   logCall: (entry: Omit<CallLog, "at">) => void;
-  updateCallDisposition: (leadKey: string, at: string, disposition: CallDisposition, note?: string) => void;
+  updateCallDisposition: (leadKey: string, at: string, disposition: CallDisposition, note?: string, temperature?: "Hot" | "Warm" | "Cold") => void;
 
   // scheduled callbacks
   scheduledCallbacks: ScheduledCallback[];
@@ -255,8 +255,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       callLogs,
       logCall: (entry) =>
         setCallLogs((prev) => [{ ...entry, at: new Date().toISOString() }, ...prev].slice(0, 200)),
-      updateCallDisposition: (leadKey, at, disposition, note) =>
-        setCallLogs((prev) => prev.map((c) => c.leadKey === leadKey && c.at === at ? { ...c, disposition, note: note ?? c.note } : c)),
+      updateCallDisposition: (leadKey, at, disposition, note, temperature) =>
+        setCallLogs((prev) => prev.map((c) => c.leadKey === leadKey && c.at === at ? { ...c, disposition, note: note ?? c.note, temperature: temperature ?? c.temperature } : c)),
 
       scheduledCallbacks,
       scheduleCallback: (cb) =>

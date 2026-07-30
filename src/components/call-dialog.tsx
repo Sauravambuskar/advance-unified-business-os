@@ -277,7 +277,7 @@ export function CallDialog({
   phone: string;
   company: string;
   photo?: string;
-  onDisposition?: (disposition: string, note: string, duration: number) => void;
+  onDisposition?: (disposition: string, note: string, duration: number, temperature: string) => void;
 }) {
   const [phase, setPhase] = useState<"dialing" | "connected" | "ended">("dialing");
   const [seconds, setSeconds] = useState(0);
@@ -288,6 +288,7 @@ export function CallDialog({
   const [showDisposition, setShowDisposition] = useState(false);
   const [disposition, setDisposition] = useState("");
   const [callNote, setCallNote] = useState("");
+  const [leadTemp, setLeadTemp] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
   const audioRef = useRef<CallAudioSession | null>(null);
@@ -415,18 +416,24 @@ export function CallDialog({
 
   const submitDisposition = () => {
     if (onDisposition) {
-      onDisposition(disposition || "Follow Up", callNote, seconds);
+      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm");
     }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
+    setLeadTemp("");
     onClose();
   };
 
   const skipDisposition = () => {
+    // Even on skip, log basic disposition if available
+    if (onDisposition && disposition) {
+      onDisposition(disposition, callNote, seconds, leadTemp || "Warm");
+    }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
+    setLeadTemp("");
     onClose();
   };
 
@@ -631,12 +638,50 @@ export function CallDialog({
   // Disposition overlay (shown after hangup)
   const dispositionPanel = showDisposition ? (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50 sticky top-0">
           <p className="text-sm font-semibold">Call Ended · Log Outcome</p>
           <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {phone} · Duration: {fmt(seconds)}</p>
         </div>
         <div className="p-5 space-y-4">
+          {/* Lead Temperature — Hot/Warm/Cold */}
+          <div>
+            <p className="text-xs font-semibold text-zinc-600 mb-2">Lead Quality</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => setLeadTemp("Hot")}
+                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  leadTemp === "Hot"
+                    ? "bg-red-500 text-white ring-2 ring-red-500/30"
+                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-red-50 hover:ring-red-200"
+                }`}
+              >
+                🔥 Hot
+              </button>
+              <button
+                onClick={() => setLeadTemp("Warm")}
+                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  leadTemp === "Warm"
+                    ? "bg-amber-500 text-white ring-2 ring-amber-500/30"
+                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-amber-50 hover:ring-amber-200"
+                }`}
+              >
+                ☀️ Warm
+              </button>
+              <button
+                onClick={() => setLeadTemp("Cold")}
+                className={`h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  leadTemp === "Cold"
+                    ? "bg-blue-500 text-white ring-2 ring-blue-500/30"
+                    : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-blue-50 hover:ring-blue-200"
+                }`}
+              >
+                ❄️ Cold
+              </button>
+            </div>
+          </div>
+
+          {/* Call Disposition */}
           <div>
             <p className="text-xs font-semibold text-zinc-600 mb-2">Call Disposition</p>
             <div className="grid grid-cols-2 gap-2">
@@ -644,7 +689,7 @@ export function CallDialog({
                 <button
                   key={d}
                   onClick={() => setDisposition(d)}
-                  className={`text-xs font-medium px-3 py-2 rounded-lg ring-1 transition-colors ${
+                  className={`text-xs font-medium px-3 py-2.5 rounded-lg ring-1 transition-colors ${
                     disposition === d
                       ? "bg-zinc-900 text-white ring-zinc-900"
                       : "bg-white ring-zinc-200 text-zinc-700 hover:bg-zinc-50"
@@ -655,6 +700,29 @@ export function CallDialog({
               ))}
             </div>
           </div>
+
+          {/* Next Action — quick shortcut */}
+          <div>
+            <p className="text-xs font-semibold text-zinc-600 mb-2">Next Action</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Follow up tomorrow", icon: "📅" },
+                { label: "Send proposal", icon: "📄" },
+                { label: "Schedule meeting", icon: "🤝" },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => setCallNote((prev) => prev ? `${prev}\nNext: ${a.label}` : `Next: ${a.label}`)}
+                  className="text-[11px] font-medium px-2 py-2 rounded-lg ring-1 ring-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-center"
+                >
+                  <span className="block text-base mb-0.5">{a.icon}</span>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Call Note */}
           <div>
             <p className="text-xs font-semibold text-zinc-600 mb-1">Call Note</p>
             <textarea
@@ -665,6 +733,8 @@ export function CallDialog({
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
             />
           </div>
+
+          {/* Actions */}
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={skipDisposition}
