@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Phone, PhoneCall, Delete, X, UserPlus, Users as UsersIcon } from "lucide-react";
 import { CallDialog } from "@/components/call-dialog";
 import { useAppStore } from "@/lib/app-store";
@@ -99,18 +100,8 @@ export function HeaderDialer({
     setPendingNumber("");
   };
 
-  return (
+  const modals = (
     <>
-      <button
-        onClick={() => setPadOpen(true)}
-        title="Open dialer"
-        aria-label="Open dialer"
-        className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#34A853] text-white text-sm font-medium hover:bg-[#2c8f46] transition-colors shrink-0"
-      >
-        <PhoneCall className="size-4" />
-        <span className="hidden md:inline">Dialer</span>
-      </button>
-
       {/* Dial pad popup */}
       {padOpen && (
         <div className="fixed inset-0 z-[55] flex items-center justify-center p-3 bg-zinc-950/60 backdrop-blur-sm">
@@ -259,6 +250,23 @@ export function HeaderDialer({
           </div>
         </div>
       )}
+    </>
+  );
+
+  return (
+    <>
+      <button
+        onClick={() => setPadOpen(true)}
+        title="Open dialer"
+        aria-label="Open dialer"
+        className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#34A853] text-white text-sm font-medium hover:bg-[#2c8f46] transition-colors shrink-0"
+      >
+        <PhoneCall className="size-4" />
+        <span className="hidden md:inline">Dialer</span>
+      </button>
+
+      {/* Portal modals to document.body to escape header's backdrop-filter containing block */}
+      {typeof document !== "undefined" && createPortal(modals, document.body)}
     </>
   );
 }

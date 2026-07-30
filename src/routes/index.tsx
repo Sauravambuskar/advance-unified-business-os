@@ -331,6 +331,24 @@ const systemNav = [
   { icon: Settings, label: "Settings" },
 ];
 
+// ─── Option lists for select/dropdown fields (globally reusable) ──────────
+const LEAD_STATUS_OPTIONS = ["New", "Contacted", "Qualified", "Proposal", "Negotiation", "Won", "Lost"];
+const LEAD_SOURCE_OPTIONS = ["Cold Call", "Website", "Referral", "Facebook Ads", "Google Ads", "LinkedIn", "Trade Show", "Email Campaign", "Partner", "Other"];
+const INDUSTRY_OPTIONS = ["Service Provider", "Manufacturing", "Retail", "Real Estate", "Education", "Healthcare", "Finance", "Technology", "Logistics", "Hospitality", "Construction", "Other"];
+const RATING_OPTIONS = ["Hot", "Warm", "Cold", "Acquired", "Active", "Inactive"];
+const COUNTRY_OPTIONS = ["India", "United States", "United Kingdom", "UAE", "Singapore", "Australia", "Canada", "Germany", "Japan", "Bangladesh", "Other"];
+const STATE_OPTIONS_INDIA = ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Other"];
+const STATE_OPTIONS_US = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC", "BC", "ON", "QC", "Other"];
+const TITLE_OPTIONS = ["CEO", "CTO", "CFO", "COO", "VP Accounting", "VP Sales", "VP Marketing", "Director of Ops", "Director of Engineering", "Manager", "Procurement Head", "Consultant", "Other"];
+const EMPLOYEE_RANGE_OPTIONS = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"];
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function Dashboard() {
   const [companyKey, setCompanyKey] = useState<CompanyKey>("group");
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -338,7 +356,7 @@ function Dashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [addLeadOpen, setAddLeadOpen] = useState(false);
-  const [leadDraft, setLeadDraft] = useState({ name: "", email: "", phone: "", message: "" });
+  const [leadDraft, setLeadDraft] = useState({ name: "", email: "", phone: "", message: "", source: "Website", stage: "New" });
   const store = useAppStore();
   const baseCompany = companies[companyKey];
 
@@ -387,28 +405,29 @@ function Dashboard() {
       return;
     }
     const initials = name.split(" ").map((s) => s[0]).slice(0, 2).join("").toUpperCase() || "??";
+    const stage = leadDraft.stage as LeadStage;
     store.addLead(companyKey, {
       name,
       time: "Just now",
       email: leadDraft.email.trim() || "—",
       phone: leadDraft.phone.trim() || "—",
-      camp: `MAN-${Math.floor(1000 + Math.random() * 9000)}`,
+      camp: `${leadDraft.source.toUpperCase().replace(/\s+/g, "-").slice(0, 4)}-${Math.floor(1000 + Math.random() * 9000)}`,
       message: leadDraft.message.trim() || "Manually added lead",
       initials,
       tone: "bg-[#4285F4] text-white",
-      stage: "New",
-      stageTone: "bg-[#4285F4] text-white ring-[#4285F4]/30",
+      stage,
+      stageTone: LEAD_STAGE_TONE[stage] ?? "bg-[#4285F4] text-white ring-[#4285F4]/30",
     });
     store.bumpUnread();
     toast.success(`Added ${name}`);
-    setLeadDraft({ name: "", email: "", phone: "", message: "" });
+    setLeadDraft({ name: "", email: "", phone: "", message: "", source: "Website", stage: "New" });
     setAddLeadOpen(false);
   };
 
 
   const sidebarContent = (
     <>
-      <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-950/5 shrink-0">
+      <div className="h-16 px-5 flex items-center gap-2 border-b border-zinc-200 shrink-0">
         <div className="size-8 rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white text-xs font-bold">
           AB
         </div>
@@ -460,7 +479,7 @@ function Dashboard() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-zinc-950/5 shrink-0">
+      <div className="p-3 border-t border-zinc-200 shrink-0">
         <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors">
           <div className="size-8 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 grid place-items-center text-white text-[11px] font-semibold shrink-0">
             ST
@@ -494,9 +513,9 @@ function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f9f9f8] text-zinc-900 font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#f4f5f7] text-zinc-900 font-sans overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="w-64 shrink-0 hidden lg:flex flex-col border-r border-zinc-950/5 bg-white">
+      <aside className="w-64 shrink-0 hidden lg:flex flex-col border-r border-zinc-200 bg-white">
         {sidebarContent}
       </aside>
 
@@ -510,7 +529,7 @@ function Dashboard() {
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 shrink-0 border-b border-zinc-950/5 bg-white/70 backdrop-blur flex items-center justify-between px-3 sm:px-6 gap-2 sm:gap-4 relative z-30">
+        <header className="h-16 shrink-0 border-b border-zinc-200 bg-white/70 backdrop-blur flex items-center justify-between px-3 sm:px-6 gap-2 sm:gap-4 relative z-30">
           {/* Mobile menu */}
           <button
             onClick={() => setMobileNavOpen(true)}
@@ -677,26 +696,18 @@ function Dashboard() {
             )}
             {activeView === "Executive Dashboard" && (<>
 
-            {/* Company hero banner */}
-            <div className="relative rounded-2xl overflow-hidden ring-1 ring-zinc-200 shadow-sm bg-white">
-              <div className="relative h-24 sm:h-28">
-                <img
-                  src={COMPANY_HERO[companyKey]}
-                  alt={company.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/80 via-zinc-950/40 to-transparent" />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            {/* Welcome banner */}
+            <div className="rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-white">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-5">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
                     {company.kind}
                   </p>
-                  <h1 className="text-xl md:text-2xl font-bold tracking-tight mt-0.5 truncate">
-                    Good evening, Sohan — {company.name}
+                  <h1 className="text-xl md:text-2xl font-bold tracking-tight mt-1 truncate">
+                    {getGreeting()}, Sohan
                   </h1>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Executive overview · role-based access · audit-logged
+                  <p className="text-sm text-zinc-600 mt-1">
+                    You're viewing <span className="font-semibold text-zinc-900">{company.name}</span> · {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -713,7 +724,6 @@ function Dashboard() {
                     <Zap className="size-3.5" /> New automation
                   </button>
                 </div>
-
               </div>
             </div>
 
@@ -724,7 +734,7 @@ function Dashboard() {
               {company.kpis.map((k) => (
                 <div
                   key={k.label}
-                  className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5"
+                  className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5"
                 >
                   <div className="flex items-start justify-between">
                     <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
@@ -745,7 +755,7 @@ function Dashboard() {
               {/* Left */}
               <div className="col-span-12 xl:col-span-8 space-y-6">
                 {/* Sales Pipeline */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Sales Pipeline</h3>
@@ -779,8 +789,8 @@ function Dashboard() {
                 </section>
 
                 {/* Lead Preview */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+                  <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Lead Management</h3>
                       <p className="text-[11px] text-zinc-500 mt-0.5">
@@ -794,7 +804,7 @@ function Dashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+                        <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
                           <th className="px-6 py-3">Profile</th>
                           <th className="px-6 py-3">Contact</th>
                           <th className="px-6 py-3">Ref ID</th>
@@ -846,7 +856,7 @@ function Dashboard() {
                 </section>
 
                 {/* Chart */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
                   <div className="flex items-center justify-between mb-8">
                     <div>
                       <h3 className="text-sm font-semibold">Business Performance</h3>
@@ -916,7 +926,7 @@ function Dashboard() {
                 </section>
 
                 {/* Recent Won Deals — customer photos */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Recent Won Deals</h3>
@@ -959,7 +969,7 @@ function Dashboard() {
                 </section>
 
                 {/* Lead Sources */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-6">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-sm font-semibold">Lead Sources</h3>
@@ -993,8 +1003,8 @@ function Dashboard() {
                 </section>
 
 
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
-                  <div className="px-6 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+                  <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Tasks & Approvals</h3>
                       <p className="text-[11px] text-zinc-500 mt-0.5">
@@ -1029,8 +1039,8 @@ function Dashboard() {
               {/* Right rail */}
               <div className="col-span-12 xl:col-span-4 space-y-6">
                 {/* Top Performers — with real photos */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
-                  <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+                  <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Top Sales Reps</h3>
                       <p className="text-[11px] text-zinc-500 mt-0.5">This month · leaderboard</p>
@@ -1066,8 +1076,8 @@ function Dashboard() {
                 </section>
 
                 {/* Industry modules */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
-                  <div className="px-5 py-4 border-b border-zinc-950/5">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+                  <div className="px-5 py-4 border-b border-zinc-200">
                     <h3 className="text-sm font-semibold">Industry Modules</h3>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
                       Scoped to {company.name}
@@ -1093,8 +1103,8 @@ function Dashboard() {
                 </section>
 
                 {/* Activity / Notifications */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
-                  <div className="px-5 py-4 border-b border-zinc-950/5 flex items-center justify-between">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+                  <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
                     <h3 className="text-sm font-semibold">Notifications & Activity</h3>
                     <button className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1">
                       <Download className="size-3.5" /> Export
@@ -1121,7 +1131,7 @@ function Dashboard() {
                 </section>
 
                 {/* Security */}
-                <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
+                <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <ShieldCheck className="size-4 text-emerald-600" />
                     <h3 className="text-sm font-semibold">Security & Access</h3>
@@ -1159,6 +1169,18 @@ function Dashboard() {
         <label className="block text-xs font-medium text-zinc-600">Phone
           <input value={leadDraft.phone} onChange={(e) => setLeadDraft((d) => ({ ...d, phone: e.target.value }))} maxLength={40} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
         </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-medium text-zinc-600">Lead Source
+            <select value={leadDraft.source} onChange={(e) => setLeadDraft((d) => ({ ...d, source: e.target.value }))} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-pointer">
+              {LEAD_SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-zinc-600">Stage
+            <select value={leadDraft.stage} onChange={(e) => setLeadDraft((d) => ({ ...d, stage: e.target.value }))} className="mt-1 w-full h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-pointer">
+              {LEAD_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+        </div>
         <label className="block text-xs font-medium text-zinc-600">Message
           <textarea value={leadDraft.message} onChange={(e) => setLeadDraft((d) => ({ ...d, message: e.target.value }))} maxLength={280} rows={3} className="mt-1 w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
         </label>
@@ -1330,7 +1352,7 @@ function renderModuleBody(view: string, company: any, companyKey: string) {
     case "Lead Management":
       return <LeadsView company={company} companyKey={companyKey} />;
     case "Sales Pipeline":
-      return <PipelineView company={company} />;
+      return <PipelineView company={company} companyKey={companyKey} />;
     case "Quotations":
       return <QuotationsView />;
     case "Invoicing":
@@ -1441,9 +1463,9 @@ function QuickStageChip({ lead, companyKey }: { lead: any; companyKey: string })
 
 function Panel({ title, subtitle, children }: any) {
   return (
-    <section className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm">
+    <section className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
       {(title || subtitle) && (
-        <div className="px-6 py-4 border-b border-zinc-950/5">
+        <div className="px-6 py-4 border-b border-zinc-200">
           {title && <h3 className="text-sm font-semibold">{title}</h3>}
           {subtitle && <p className="text-[11px] text-zinc-500 mt-0.5">{subtitle}</p>}
         </div>
@@ -1459,7 +1481,7 @@ function CRMView({ company, companyKey }: any) {
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
               <th className="px-6 py-3">Contact</th>
               <th className="px-6 py-3">Email</th>
               <th className="px-6 py-3">Phone</th>
@@ -1553,13 +1575,6 @@ const coverFor = (seed: string) => {
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   return COVER_POOL[h % COVER_POOL.length];
 };
-const COMPANY_HERO: Record<string, string> = {
-  group: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1600&q=80&auto=format&fit=crop",
-  education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1600&q=80&auto=format&fit=crop",
-  realestate: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1600&q=80&auto=format&fit=crop",
-  facility: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1600&q=80&auto=format&fit=crop",
-};
-
 const seedLeads = (company: any): FullLead[] =>
   company.leads.map((l: any, i: number): FullLead => ({
     id: `LD-${1000 + i}`,
@@ -1641,6 +1656,26 @@ function Field({ label, value, onChange, type = "text", multiline = false }: {
   );
 }
 
+function SelectField({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[];
+}) {
+  return (
+    <div className="group grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-200 hover:bg-zinc-50/50 px-2 -mx-2 rounded">
+      <label className="text-xs font-medium text-zinc-500 pt-1">{label}</label>
+      <select
+        value={options.includes(value) ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="text-sm text-zinc-800 bg-white border border-zinc-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 cursor-pointer hover:border-zinc-300"
+      >
+        {!options.includes(value) && <option value="">{value || "Select…"}</option>}
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function LeadDetail({ lead, onUpdate, onBack }: {
   lead: FullLead; onUpdate: (patch: Partial<FullLead>) => void; onBack: () => void;
 }) {
@@ -1672,7 +1707,7 @@ function LeadDetail({ lead, onUpdate, onBack }: {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
         <div className="h-24 sm:h-28 relative" style={{ background: `url(${lead.cover}) center/cover, linear-gradient(135deg,#0f172a,#334155)` }}>
           <button onClick={onBack} className="absolute top-3 left-3 text-xs font-medium bg-white/90 hover:bg-white px-3 py-1.5 rounded-lg ring-1 ring-black/10 shadow-sm">
             ← Back to Leads
@@ -1697,19 +1732,32 @@ function LeadDetail({ lead, onUpdate, onBack }: {
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-0 border-t border-zinc-200">
           {[
-            { l: "Lead Owner", k: "owner" as const },
-            { l: "Email", k: "email" as const },
-            { l: "Phone", k: "phone" as const },
-            { l: "Mobile", k: "mobile" as const },
-            { l: "Lead Status", k: "status" as const },
+            { l: "Lead Owner", k: "owner" as const, type: "text" },
+            { l: "Email", k: "email" as const, type: "email" },
+            { l: "Phone", k: "phone" as const, type: "tel" },
+            { l: "Mobile", k: "mobile" as const, type: "tel" },
+            { l: "Lead Status", k: "status" as const, type: "select" },
           ].map((f, i) => (
             <div key={f.k} className={`p-4 border-zinc-200 ${i < 4 ? "md:border-r" : ""} ${i % 2 === 0 ? "border-r md:border-r" : ""} ${i < 3 ? "border-b md:border-b-0" : i === 3 ? "border-b md:border-b-0" : ""}`}>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{f.l}</p>
-              <input
-                value={lead[f.k] as string}
-                onChange={(e) => onUpdate({ [f.k]: e.target.value } as any)}
-                className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1 truncate"
-              />
+              {f.type === "select" ? (
+                <select
+                  value={LEAD_STATUS_OPTIONS.includes(lead[f.k] as string) ? (lead[f.k] as string) : ""}
+                  onChange={(e) => onUpdate({ [f.k]: e.target.value } as any)}
+                  className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1 cursor-pointer border border-zinc-200 h-8"
+                >
+                  {!LEAD_STATUS_OPTIONS.includes(lead[f.k] as string) && <option value="">{lead[f.k] as string}</option>}
+                  {LEAD_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={lead[f.k] as string}
+                  onChange={(e) => onUpdate({ [f.k]: e.target.value } as any)}
+                  className="text-sm font-medium text-zinc-800 mt-1 bg-transparent w-full outline-none focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 -mx-1 truncate"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -1728,11 +1776,11 @@ function LeadDetail({ lead, onUpdate, onBack }: {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0 p-6">
               <div>
                 <Field label="Lead Owner" value={lead.owner} onChange={set("owner")} />
-                <Field label="Title" value={lead.title} onChange={set("title")} />
+                <SelectField label="Title" value={lead.title} onChange={set("title")} options={TITLE_OPTIONS} />
                 <Field label="Phone" value={lead.phone} onChange={set("phone")} />
                 <Field label="Mobile" value={lead.mobile} onChange={set("mobile")} />
-                <Field label="Lead Source" value={lead.source} onChange={set("source")} />
-                <Field label="Industry" value={lead.industry} onChange={set("industry")} />
+                <SelectField label="Lead Source" value={lead.source} onChange={set("source")} options={LEAD_SOURCE_OPTIONS} />
+                <SelectField label="Industry" value={lead.industry} onChange={set("industry")} options={INDUSTRY_OPTIONS} />
                 <Field label="Annual Revenue" value={lead.revenue} onChange={set("revenue")} />
                 <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 border-b border-zinc-200 px-2 -mx-2">
                   <label className="text-xs font-medium text-zinc-500 pt-1">Email Opt Out</label>
@@ -1755,9 +1803,9 @@ function LeadDetail({ lead, onUpdate, onBack }: {
                 <Field label="Email" value={lead.email} onChange={set("email")} type="email" />
                 <Field label="Fax" value={lead.fax} onChange={set("fax")} />
                 <Field label="Website" value={lead.website} onChange={set("website")} />
-                <Field label="Lead Status" value={lead.status} onChange={set("status")} />
-                <Field label="No. of Employees" value={lead.employees} onChange={set("employees")} />
-                <Field label="Rating" value={lead.rating} onChange={set("rating")} />
+                <SelectField label="Lead Status" value={lead.status} onChange={set("status")} options={LEAD_STATUS_OPTIONS} />
+                <SelectField label="No. of Employees" value={lead.employees} onChange={set("employees")} options={EMPLOYEE_RANGE_OPTIONS} />
+                <SelectField label="Rating" value={lead.rating} onChange={set("rating")} options={RATING_OPTIONS} />
                 <div className="grid grid-cols-[160px_1fr] gap-3 py-2.5 px-2 -mx-2">
                   <label className="text-xs font-medium text-zinc-500 pt-1">Created By</label>
                   <div className="text-sm">
@@ -1780,9 +1828,9 @@ function LeadDetail({ lead, onUpdate, onBack }: {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 p-6">
               <Field label="Street" value={lead.street} onChange={set("street")} />
               <Field label="City" value={lead.city} onChange={set("city")} />
-              <Field label="State" value={lead.state} onChange={set("state")} />
+              <SelectField label="State" value={lead.state} onChange={set("state")} options={lead.country === "India" ? STATE_OPTIONS_INDIA : STATE_OPTIONS_US} />
               <Field label="Zip Code" value={lead.zip} onChange={set("zip")} />
-              <Field label="Country" value={lead.country} onChange={set("country")} />
+              <SelectField label="Country" value={lead.country} onChange={set("country")} options={COUNTRY_OPTIONS} />
             </div>
           </Panel>
 
@@ -1909,7 +1957,7 @@ function LeadsView({ company, companyKey }: any) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {["New", "Qualified", "Proposal", "Won"].map((s, i) => (
-          <div key={s} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
+          <div key={s} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
             <p className="text-xs text-zinc-500 font-medium">{s}</p>
             <p className="text-2xl font-bold tracking-tight mt-2">{[128, 46, 22, 18][i]}</p>
             <p className="text-[11px] text-emerald-600 font-semibold mt-1">Auto-assigned</p>
@@ -1920,7 +1968,7 @@ function LeadsView({ company, companyKey }: any) {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
                 <th className="px-6 py-3">Lead</th>
                 <th className="px-6 py-3">Company</th>
                 <th className="px-6 py-3">Email</th>
@@ -1973,27 +2021,87 @@ function LeadsView({ company, companyKey }: any) {
   );
 }
 
-function PipelineView({ company }: any) {
+function PipelineView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const [pipeline, setPipeline] = useState<Record<string, any[]>>(() => {
+    const map: Record<string, any[]> = {};
+    company.pipeline.forEach((s: any) => { map[s.stage] = []; });
+    company.leads.forEach((l: any, i: number) => {
+      const stage = store.leadStages[companyKey]?.[leadKeyOf(l)] ?? l.stage;
+      const target = Object.keys(map).includes(stage) ? stage : Object.keys(map)[0];
+      map[target] = [...(map[target] ?? []), l];
+    });
+    return map;
+  });
+
+  const onDragStart = (e: React.DragEvent, lead: any, fromStage: string) => {
+    e.dataTransfer.setData("application/json", JSON.stringify({ lead, fromStage }));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onDrop = (toStage: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const { lead, fromStage } = JSON.parse(e.dataTransfer.getData("application/json"));
+      if (fromStage === toStage) return;
+      setPipeline((prev) => {
+        const updated = { ...prev };
+        updated[fromStage] = (updated[fromStage] ?? []).filter((l: any) => leadKeyOf(l) !== leadKeyOf(lead));
+        updated[toStage] = [...(updated[toStage] ?? []), lead];
+        return updated;
+      });
+      const key = leadKeyOf(lead);
+      const stageMap: Record<string, LeadStage> = { "New": "New", "Qualified": "Qualified", "Proposal": "Proposal", "Negotiation": "Negotiation", "Won": "Won" };
+      if (stageMap[toStage]) {
+        store.setLeadStage(companyKey, key, stageMap[toStage]);
+      }
+      toast.success(`${lead.name} → ${toStage}`);
+    } catch {}
+  };
+
+  const stages = company.pipeline.map((s: any) => s.stage);
+  const stageColors = ["bg-[#4285F4]", "bg-[#FBBC05]", "bg-[#F29900]", "bg-[#EA4335]", "bg-[#34A853]"];
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-      {company.pipeline.map((s: any, i: number) => (
-        <div key={s.stage} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`size-1.5 rounded-full ${["bg-[#4285F4]","bg-[#FBBC05]","bg-[#FBBC05]","bg-[#EA4335]","bg-[#34A853]"][i]}`} />
-              <p className="text-xs font-semibold">{s.stage}</p>
+      {stages.map((stage: string, i: number) => {
+        const leads = pipeline[stage] ?? [];
+        const stageData = company.pipeline.find((s: any) => s.stage === stage);
+        return (
+          <div
+            key={stage}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={onDrop(stage)}
+            className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4 space-y-3 min-h-[200px]"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`size-2 rounded-full ${stageColors[i % stageColors.length]}`} />
+                <p className="text-xs font-semibold">{stage}</p>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-500">{leads.length}</span>
             </div>
-            <span className="text-[10px] font-mono text-zinc-500">{s.count}</span>
+            <p className="text-[11px] text-zinc-500 font-mono">{stageData?.value ?? "—"}</p>
+            {leads.map((l: any) => (
+              <div
+                key={leadKeyOf(l)}
+                draggable
+                onDragStart={(e) => onDragStart(e, l, stage)}
+                className="rounded-xl border border-zinc-200 p-3 cursor-grab active:cursor-grabbing hover:border-zinc-300 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <img src={`https://i.pravatar.cc/40?u=${encodeURIComponent(l.name)}`} alt="" className="size-6 rounded-full" />
+                  <p className="text-xs font-medium truncate">{l.name}</p>
+                </div>
+                <p className="text-[10px] text-zinc-500 truncate mt-1">{l.camp} · {l.phone}</p>
+              </div>
+            ))}
+            {leads.length === 0 && (
+              <p className="text-[11px] text-zinc-400 italic text-center py-4">Drop leads here</p>
+            )}
           </div>
-          <p className="text-[11px] text-zinc-500 font-mono">{s.value}</p>
-          {company.leads.slice(0, 2).map((l: any) => (
-            <div key={l.name + s.stage} className="rounded-xl border border-zinc-200 p-3 hover:border-zinc-300">
-              <p className="text-xs font-medium truncate">{l.name}</p>
-              <p className="text-[10px] text-zinc-500 truncate mt-0.5">{l.camp}</p>
-            </div>
-          ))}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -2005,7 +2113,7 @@ function QuotationsView() {
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
               <th className="px-6 py-3">Quote ID</th>
               <th className="px-6 py-3">Client</th>
               <th className="px-6 py-3">Amount</th>
@@ -2022,13 +2130,25 @@ function QuotationsView() {
                 <td className="px-6 py-3.5 text-sm font-mono">{q.amount}</td>
                 <td className="px-6 py-3.5 text-xs text-zinc-500">{q.date}</td>
                 <td className="px-6 py-3.5">
-                  <button
-                    onClick={() => store.cycleQuotation(q.id)}
-                    className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${QUOTE_TONE[q.status]} hover:opacity-80`}
-                    title="Click to advance status"
-                  >
-                    {q.status}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => store.cycleQuotation(q.id)}
+                      className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${QUOTE_TONE[q.status]} hover:opacity-80`}
+                      title="Click to advance status"
+                    >
+                      {q.status}
+                    </button>
+                    <select
+                      value={q.status}
+                      onChange={(e) => store.setQuotationStatus(q.id, e.target.value as any)}
+                      className="text-[10px] bg-white border border-zinc-200 rounded px-1 py-0.5 text-zinc-600 hover:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 cursor-pointer"
+                      aria-label="Set status"
+                    >
+                      {(["Draft", "Sent", "Awaiting Approval", "Approved"] as const).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
                 </td>
                 <td className="px-6 py-3.5 text-right">
                   <button
@@ -2070,7 +2190,7 @@ function InvoicingView() {
           { l: "Paid (MTD)", v: formatAmount(totals.paid), tone: "text-emerald-600" },
           { l: "Overdue", v: formatAmount(totals.overdue), tone: "text-rose-600" },
         ].map((k) => (
-          <div key={k.l} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
+          <div key={k.l} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
             <p className="text-xs text-zinc-500 font-medium">{k.l}</p>
             <p className={`text-2xl font-bold tracking-tight mt-2 ${k.tone}`}>{k.v}</p>
           </div>
@@ -2080,7 +2200,7 @@ function InvoicingView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
                 <th className="px-6 py-3">Invoice</th>
                 <th className="px-6 py-3">Client</th>
                 <th className="px-6 py-3">Amount</th>
@@ -2097,13 +2217,25 @@ function InvoicingView() {
                   <td className="px-6 py-3.5 text-sm font-mono">{i.amount}</td>
                   <td className="px-6 py-3.5 text-xs text-zinc-500">{i.due}</td>
                   <td className="px-6 py-3.5">
-                    <button
-                      onClick={() => store.cycleInvoice(i.id)}
-                      className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${INV_TONE[i.status]} hover:opacity-80`}
-                      title="Click to advance status"
-                    >
-                      {i.status}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => store.cycleInvoice(i.id)}
+                        className={`inline-flex text-[10px] font-semibold px-2 py-1 rounded-md ring-1 ${INV_TONE[i.status]} hover:opacity-80`}
+                        title="Click to advance status"
+                      >
+                        {i.status}
+                      </button>
+                      <select
+                        value={i.status}
+                        onChange={(e) => store.setInvoiceStatus(i.id, e.target.value as any)}
+                        className="text-[10px] bg-white border border-zinc-200 rounded px-1 py-0.5 text-zinc-600 hover:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 cursor-pointer"
+                        aria-label="Set status"
+                      >
+                        {(["Draft", "Sent", "Paid", "Overdue"] as const).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
                   </td>
                   <td className="px-6 py-3.5 text-right">
                     <button
@@ -2146,27 +2278,113 @@ function formatAmount(n: number): string {
 
 
 function CustomerPortalView({ company }: any) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [tickets, setTickets] = useState<Record<string, { id: string; subject: string; status: string }[]>>({});
+
+  const createTicket = (name: string) => {
+    const subject = prompt("Ticket subject:");
+    if (!subject) return;
+    setTickets((prev) => ({
+      ...prev,
+      [name]: [
+        { id: `TKT-${Date.now().toString(36).toUpperCase()}`, subject, status: "Open" },
+        ...(prev[name] ?? []),
+      ],
+    }));
+    toast.success("Ticket created");
+  };
+
+  const closeTicket = (name: string, id: string) => {
+    setTickets((prev) => ({
+      ...prev,
+      [name]: (prev[name] ?? []).map((t) => t.id === id ? { ...t, status: "Closed" } : t),
+    }));
+    toast.success("Ticket closed");
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {company.leads.map((l: any) => (
-        <div key={l.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className={`size-11 rounded-full ${l.tone} grid place-items-center text-sm font-semibold ring-1 ring-zinc-200`}>{l.initials}</div>
-            <div>
-              <p className="text-sm font-semibold">{l.name}</p>
-              <p className="text-[11px] text-zinc-500">{l.email}</p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {company.leads.map((l: any) => {
+          const isExpanded = expanded === l.name;
+          const leadTickets = tickets[l.name] ?? [];
+          return (
+            <div key={l.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-center gap-3">
+                  <img src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`} alt={l.name} className="size-11 rounded-full ring-1 ring-zinc-200 object-cover" />
+                  <div>
+                    <p className="text-sm font-semibold">{l.name}</p>
+                    <p className="text-[11px] text-zinc-500">{l.email}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                  <div><p className="text-[10px] text-zinc-500">Invoices</p><p className="text-sm font-bold">4</p></div>
+                  <div><p className="text-[10px] text-zinc-500">Tickets</p><p className="text-sm font-bold">{leadTickets.length || 1}</p></div>
+                  <div><p className="text-[10px] text-zinc-500">Docs</p><p className="text-sm font-bold">12</p></div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => setExpanded(isExpanded ? null : l.name)}
+                    className="flex-1 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800"
+                  >
+                    {isExpanded ? "Close" : "Open portal"}
+                  </button>
+                  <button
+                    onClick={() => createTicket(l.name)}
+                    className="py-2 px-3 text-xs font-semibold rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50"
+                  >
+                    + Ticket
+                  </button>
+                </div>
+              </div>
+              {isExpanded && (
+                <div className="border-t border-zinc-200 p-4 bg-zinc-50 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">Contact Info</p>
+                    <div className="text-xs space-y-1">
+                      <p><span className="text-zinc-500">Phone:</span> {l.phone}</p>
+                      <p><span className="text-zinc-500">Email:</span> {l.email}</p>
+                      <p><span className="text-zinc-500">Account:</span> {l.camp}</p>
+                      <p><span className="text-zinc-500">Stage:</span> {l.stage}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">Support Tickets</p>
+                    {leadTickets.length === 0 ? (
+                      <p className="text-[11px] text-zinc-400 italic">No tickets yet</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {leadTickets.map((t) => (
+                          <li key={t.id} className="flex items-center justify-between bg-white rounded-lg ring-1 ring-zinc-200 px-3 py-2">
+                            <div>
+                              <p className="text-xs font-medium">{t.subject}</p>
+                              <p className="text-[10px] text-zinc-500">{t.id}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${t.status === "Open" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                                {t.status}
+                              </span>
+                              {t.status === "Open" && (
+                                <button onClick={() => closeTicket(l.name, t.id)} className="text-[10px] text-zinc-500 hover:text-zinc-900">Close</button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">Last Activity</p>
+                    <p className="text-xs text-zinc-600">{l.message}</p>
+                    <p className="text-[10px] text-zinc-400 mt-1">{l.time}</p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-            <div><p className="text-[10px] text-zinc-500">Invoices</p><p className="text-sm font-bold">4</p></div>
-            <div><p className="text-[10px] text-zinc-500">Tickets</p><p className="text-sm font-bold">1</p></div>
-            <div><p className="text-[10px] text-zinc-500">Docs</p><p className="text-sm font-bold">12</p></div>
-          </div>
-          <button className="w-full mt-4 py-2 text-xs font-semibold bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">
-            Open portal
-          </button>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2186,7 +2404,7 @@ function TasksView({ company, companyKey }: any) {
           key={c}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop(c)}
-          className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-4 space-y-3 min-h-40"
+          className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4 space-y-3 min-h-40"
         >
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold">{c}</p>
@@ -2228,22 +2446,91 @@ const projectsData = [
 ];
 
 function ProjectsView() {
+  const [projects, setProjects] = useState(projectsData);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState({ name: "", phase: "Planning", owner: "" });
+
+  const addProject = () => {
+    if (!draft.name.trim()) { toast.error("Project name required"); return; }
+    setProjects((prev) => [...prev, { name: draft.name.trim(), phase: draft.phase, progress: 0, owner: draft.owner.trim() || "Unassigned" }]);
+    setDraft({ name: "", phase: "Planning", owner: "" });
+    setAddOpen(false);
+    toast.success("Project created");
+  };
+
+  const deleteProject = (name: string) => {
+    setProjects((prev) => prev.filter((p) => p.name !== name));
+    toast.success("Project deleted");
+  };
+
+  const updateProgress = (name: string, delta: number) => {
+    setProjects((prev) => prev.map((p) => p.name === name ? { ...p, progress: Math.max(0, Math.min(100, p.progress + delta)) } : p));
+  };
+
+  const cyclePhase = (name: string) => {
+    const phases = ["Discovery", "Planning", "Execution", "Review", "Complete"];
+    setProjects((prev) => prev.map((p) => {
+      if (p.name !== name) return p;
+      const idx = phases.indexOf(p.phase);
+      return { ...p, phase: phases[(idx + 1) % phases.length] };
+    }));
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {projectsData.map((p) => (
-        <div key={p.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm font-semibold">{p.name}</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">{p.owner} · {p.phase}</p>
-            </div>
-            <span className="text-xs font-mono font-semibold">{p.progress}%</span>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+          <Plus className="size-3.5" /> New Project
+        </button>
+      </div>
+
+      {addOpen && (
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 space-y-3">
+          <p className="text-sm font-semibold">New Project</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Project name" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+            <select value={draft.phase} onChange={(e) => setDraft({ ...draft, phase: e.target.value })} className="h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+              {["Discovery", "Planning", "Execution", "Review"].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <input value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value })} placeholder="Owner / team" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
           </div>
-          <div className="h-2 bg-zinc-100 rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-zinc-900 rounded-full" style={{ width: `${p.progress}%` }} />
+          <div className="flex gap-2">
+            <button onClick={addProject} className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">Create</button>
+            <button onClick={() => setAddOpen(false)} className="text-xs font-semibold px-4 py-2 rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50">Cancel</button>
           </div>
         </div>
-      ))}
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {projects.map((p) => (
+          <div key={p.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-semibold">{p.name}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">{p.owner}</p>
+              </div>
+              <button onClick={() => deleteProject(p.name)} className="text-[11px] text-zinc-400 hover:text-rose-600">Delete</button>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <button onClick={() => cyclePhase(p.name)} className="text-[10px] font-semibold px-2 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700" title="Click to advance phase">
+                {p.phase}
+              </button>
+              <span className="text-xs font-mono font-semibold ml-auto">{p.progress}%</span>
+            </div>
+            <div className="h-2 bg-zinc-100 rounded-full mt-3 overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${p.progress >= 100 ? "bg-emerald-500" : "bg-zinc-900"}`} style={{ width: `${p.progress}%` }} />
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <button onClick={() => updateProgress(p.name, -10)} className="text-[10px] font-semibold px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200">−10%</button>
+              <button onClick={() => updateProgress(p.name, 10)} className="text-[10px] font-semibold px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200">+10%</button>
+              <button onClick={() => updateProgress(p.name, 100 - p.progress)} className="text-[10px] font-semibold px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700">Complete</button>
+            </div>
+          </div>
+        ))}
+        {projects.length === 0 && (
+          <p className="text-xs text-zinc-500 italic col-span-2 text-center py-8">No projects. Click New Project to start.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -2258,52 +2545,159 @@ const docsData = [
 ];
 
 function DocumentsView() {
+  const [docs, setDocs] = useState(docsData);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState({ name: "", size: "" });
+
+  const addDoc = () => {
+    if (!draft.name.trim()) { toast.error("File name required"); return; }
+    setDocs((prev) => [{ name: draft.name.trim(), size: draft.size.trim() || "0 KB", updated: "Just now" }, ...prev]);
+    setDraft({ name: "", size: "" });
+    setAddOpen(false);
+    toast.success("Document added");
+  };
+
+  const deleteDoc = (name: string) => {
+    setDocs((prev) => prev.filter((d) => d.name !== name));
+    toast.success("Document deleted");
+  };
+
+  const downloadDoc = (name: string) => {
+    const blob = new Blob([`[Simulated content of ${name}]`], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded ${name}`);
+  };
+
+  const renameDoc = (oldName: string) => {
+    const newName = prompt("Rename to:", oldName);
+    if (!newName || newName === oldName) return;
+    setDocs((prev) => prev.map((d) => d.name === oldName ? { ...d, name: newName, updated: "Just now" } : d));
+    toast.success("Renamed");
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-      {docsData.map((d) => (
-        <div key={d.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5 flex items-center gap-4">
-          <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
-            <FolderOpen className="size-4 text-zinc-700" />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+          <Plus className="size-3.5" /> Upload Document
+        </button>
+      </div>
+
+      {addOpen && (
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 space-y-3">
+          <p className="text-sm font-semibold">Add Document</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="File name (e.g. contract.pdf)" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+            <input value={draft.size} onChange={(e) => setDraft({ ...draft, size: e.target.value })} placeholder="Size (e.g. 2.4 MB)" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{d.name}</p>
-            <p className="text-[11px] text-zinc-500 mt-0.5">{d.size} · {d.updated}</p>
+          <div className="flex gap-2">
+            <button onClick={addDoc} className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">Add</button>
+            <button onClick={() => setAddOpen(false)} className="text-xs font-semibold px-4 py-2 rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50">Cancel</button>
           </div>
-          <button className="size-7 grid place-items-center rounded-md hover:bg-zinc-100">
-            <MoreHorizontal className="size-4 text-zinc-400" />
-          </button>
         </div>
-      ))}
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {docs.map((d) => (
+          <div key={d.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+            <div className="flex items-center gap-4">
+              <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
+                <FolderOpen className="size-4 text-zinc-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{d.name}</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">{d.size} · {d.updated}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-100">
+              <button onClick={() => downloadDoc(d.name)} className="text-[10px] font-semibold px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700">
+                <Download className="size-3 inline mr-1" />Download
+              </button>
+              <button onClick={() => renameDoc(d.name)} className="text-[10px] font-semibold px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700">Rename</button>
+              <button onClick={() => deleteDoc(d.name)} className="text-[10px] font-semibold px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 ml-auto">Delete</button>
+            </div>
+          </div>
+        ))}
+        {docs.length === 0 && (
+          <p className="text-xs text-zinc-500 italic col-span-3 text-center py-8">No documents. Click Upload Document to add one.</p>
+        )}
+      </div>
     </div>
   );
 }
 
 function NotificationsView({ company }: any) {
+  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const all = [...company.activity, ...company.activity].map((n: any, i: number) => ({ ...n, i }));
+  const visible = all.filter((_, idx) => !dismissed.has(idx));
+
+  const dismiss = (idx: number) => {
+    setDismissed((prev) => new Set([...prev, idx]));
+    toast.success("Notification dismissed");
+  };
+
+  const clearAll = () => {
+    setDismissed(new Set(all.map((_, i) => i)));
+    toast.success("All notifications cleared");
+  };
+
   return (
     <Panel title="All Notifications" subtitle="Realtime · filtered to selected company">
+      <div className="px-6 py-3 border-b border-zinc-200 flex items-center justify-between">
+        <p className="text-xs text-zinc-500">{visible.length} notifications</p>
+        <button onClick={clearAll} className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900">Clear all</button>
+      </div>
       <div className="divide-y divide-zinc-950/5">
-        {all.map((n: any, idx: number) => (
-          <div key={idx} className="px-6 py-4 flex items-start gap-3">
-            <div className={`mt-1.5 size-2 rounded-full shrink-0 ${n.tone}`} />
-            <div className="flex-1">
-              <p className="text-sm font-semibold">{n.title}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">{n.body}</p>
+        {visible.length === 0 ? (
+          <p className="px-6 py-8 text-center text-xs text-zinc-500 italic">All caught up — no notifications.</p>
+        ) : (
+          visible.map((n: any, idx: number) => (
+            <div key={idx} className="px-6 py-4 flex items-start gap-3 group">
+              <div className={`mt-1.5 size-2 rounded-full shrink-0 ${n.tone}`} />
+              <div className="flex-1">
+                <p className="text-sm font-semibold">{n.title}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{n.body}</p>
+              </div>
+              <span className="text-[11px] text-zinc-400 font-mono">{n.time}</span>
+              <button
+                onClick={() => dismiss(all.indexOf(n))}
+                className="text-[10px] text-zinc-400 hover:text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
             </div>
-            <span className="text-[11px] text-zinc-400 font-mono">{n.time}</span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </Panel>
   );
 }
 
 function AnalyticsView({ company }: any) {
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const store = useAppStore();
+
+  // Lead source breakdown
+  const sources = ["Website", "Referral", "Cold Call", "Facebook Ads", "Google Ads", "Events"];
+  const sourceData = sources.map((s, i) => ({ source: s, count: Math.floor(20 + Math.random() * 80), conversion: `${(15 + i * 8).toFixed(1)}%` }));
+
+  // Pipeline velocity
+  const pipelineTotal = company.pipeline.reduce((a: number, s: any) => a + s.count, 0);
+  const wonStage = company.pipeline.find((s: any) => s.stage === "Won" || s.stage === "Registered" || s.stage === "Enrolled" || s.stage === "Booked");
+  const winRate = wonStage ? ((wonStage.count / pipelineTotal) * 100).toFixed(1) : "0";
+
   return (
     <>
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {company.kpis.map((k: any) => (
-          <div key={k.label} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
+          <div key={k.label} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
             <div className="flex items-start justify-between">
               <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
               <div className="size-8 rounded-lg bg-zinc-50 grid place-items-center">
@@ -2317,18 +2711,92 @@ function AnalyticsView({ company }: any) {
           </div>
         ))}
       </section>
-      <Panel title="12-Month Trend" subtitle={`Conversions · ${company.name}`}>
-        <div className="p-6">
-          <div className="flex items-end gap-2 h-56">
-            {company.chart.map((b: any, i: number) => (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-                <div className={`w-full rounded-t-md ${b.active ? "bg-zinc-900" : "bg-zinc-200"}`} style={{ height: `${b.v * 100}%` }} />
-                <span className="mt-2 text-[10px] font-semibold text-zinc-400">{b.m}</span>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Panel title="Win Rate" subtitle="Pipeline conversion">
+          <div className="p-6 flex flex-col items-center">
+            <div className="relative size-32">
+              <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#34A853" strokeWidth="3" strokeDasharray={`${parseFloat(winRate)} 100`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xl font-bold">{winRate}%</span>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500 mt-3">{wonStage?.count ?? 0} won of {pipelineTotal} total</p>
+          </div>
+        </Panel>
+
+        <Panel title="Pipeline Breakdown" subtitle="Leads per stage">
+          <div className="p-6 space-y-3">
+            {company.pipeline.map((s: any) => {
+              const pct = pipelineTotal > 0 ? (s.count / pipelineTotal) * 100 : 0;
+              return (
+                <div key={s.stage}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium">{s.stage}</span>
+                    <span className="text-zinc-500">{s.count} · {s.value}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-zinc-900 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+
+        <Panel title="Lead Sources" subtitle="Acquisition channel performance">
+          <div className="p-6 space-y-2">
+            {sourceData.map((s) => (
+              <div key={s.source} className="flex items-center justify-between py-1.5 border-b border-zinc-100 last:border-0">
+                <span className="text-xs font-medium">{s.source}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-500">{s.count} leads</span>
+                  <span className="text-[10px] font-semibold text-emerald-600">{s.conversion}</span>
+                </div>
               </div>
             ))}
           </div>
+        </Panel>
+      </div>
+
+      <Panel title="12-Month Trend" subtitle={`Conversions · ${company.name} · click a bar to inspect`}>
+        <div className="p-6">
+          <div className="flex items-end gap-2 h-56">
+            {company.chart.map((b: any, i: number) => (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full cursor-pointer" onClick={() => setSelectedMonth(i === selectedMonth ? null : i)}>
+                <div className={`w-full rounded-t-md transition-colors ${i === selectedMonth ? "bg-[#4285F4]" : b.active ? "bg-zinc-900" : "bg-zinc-200 hover:bg-zinc-300"}`} style={{ height: `${b.v * 100}%` }} />
+                <span className={`mt-2 text-[10px] font-semibold ${i === selectedMonth ? "text-[#4285F4]" : "text-zinc-400"}`}>{b.m}</span>
+              </div>
+            ))}
+          </div>
+          {selectedMonth !== null && (
+            <div className="mt-4 p-3 rounded-lg bg-zinc-50 ring-1 ring-zinc-200">
+              <p className="text-xs font-semibold">{company.chart[selectedMonth].m} — Conversion rate: {(company.chart[selectedMonth].v * 100).toFixed(0)}%</p>
+              <p className="text-[11px] text-zinc-500 mt-1">
+                Estimated deals closed: {Math.round(company.chart[selectedMonth].v * pipelineTotal)} · Revenue contribution: {formatAmount(company.chart[selectedMonth].v * 1e7)}
+              </p>
+            </div>
+          )}
         </div>
       </Panel>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            downloadCSV(`${company.name.replace(/\s+/g, "_").toLowerCase()}_analytics.csv`, [
+              ...company.kpis.map((k: any) => ({ metric: k.label, value: k.value, change: k.delta })),
+              ...company.pipeline.map((p: any) => ({ metric: `Pipeline: ${p.stage}`, value: String(p.count), change: p.value })),
+            ]);
+            toast.success("Analytics exported");
+          }}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50"
+        >
+          <Download className="size-3.5" /> Export Analytics
+        </button>
+      </div>
     </>
   );
 }
@@ -2343,29 +2811,104 @@ const rolesData = [
 ];
 
 function RolesView() {
+  const [roles, setRoles] = useState(rolesData);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState({ role: "", scope: "" });
+  const [editingRole, setEditingRole] = useState<string | null>(null);
+  const [editScope, setEditScope] = useState("");
+
+  const addRole = () => {
+    if (!draft.role.trim()) { toast.error("Role name required"); return; }
+    setRoles((prev) => [...prev, { role: draft.role.trim(), users: 0, scope: draft.scope.trim() || "Custom access" }]);
+    setDraft({ role: "", scope: "" });
+    setAddOpen(false);
+    toast.success("Role created");
+  };
+
+  const deleteRole = (role: string) => {
+    setRoles((prev) => prev.filter((r) => r.role !== role));
+    toast.success("Role deleted");
+  };
+
+  const startEdit = (r: typeof rolesData[0]) => {
+    setEditingRole(r.role);
+    setEditScope(r.scope);
+  };
+
+  const saveEdit = (role: string) => {
+    setRoles((prev) => prev.map((r) => r.role === role ? { ...r, scope: editScope } : r));
+    setEditingRole(null);
+    toast.success("Updated");
+  };
+
   return (
-    <Panel title="Roles & Permissions" subtitle="Role-based access control · audit-logged">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-950/5">
-              <th className="px-6 py-3">Role</th>
-              <th className="px-6 py-3">Users</th>
-              <th className="px-6 py-3">Scope</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-950/5">
-            {rolesData.map((r) => (
-              <tr key={r.role} className="hover:bg-zinc-50/60">
-                <td className="px-6 py-3.5 text-sm font-semibold">{r.role}</td>
-                <td className="px-6 py-3.5 text-sm font-mono">{r.users}</td>
-                <td className="px-6 py-3.5 text-xs text-zinc-600">{r.scope}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+          <Plus className="size-3.5" /> Add Role
+        </button>
       </div>
-    </Panel>
+
+      {addOpen && (
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 space-y-3">
+          <p className="text-sm font-semibold">New Role</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} placeholder="Role name" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+            <input value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value })} placeholder="Scope / permissions" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addRole} className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">Create</button>
+            <button onClick={() => setAddOpen(false)} className="text-xs font-semibold px-4 py-2 rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <Panel title="Roles & Permissions" subtitle="Role-based access control · click scope to edit · audit-logged">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                <th className="px-6 py-3">Role</th>
+                <th className="px-6 py-3">Users</th>
+                <th className="px-6 py-3">Scope</th>
+                <th className="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-950/5">
+              {roles.map((r) => (
+                <tr key={r.role} className="hover:bg-zinc-50/60">
+                  <td className="px-6 py-3.5 text-sm font-semibold">{r.role}</td>
+                  <td className="px-6 py-3.5 text-sm font-mono">{r.users}</td>
+                  <td className="px-6 py-3.5">
+                    {editingRole === r.role ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={editScope}
+                          onChange={(e) => setEditScope(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && saveEdit(r.role)}
+                          className="h-7 px-2 text-xs rounded border border-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-400 flex-1"
+                          autoFocus
+                        />
+                        <button onClick={() => saveEdit(r.role)} className="text-[10px] font-semibold text-emerald-600 hover:text-emerald-700">Save</button>
+                        <button onClick={() => setEditingRole(null)} className="text-[10px] text-zinc-500 hover:text-zinc-700">Cancel</button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-zinc-600 cursor-pointer hover:text-zinc-900" onClick={() => startEdit(r)}>{r.scope}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <button onClick={() => deleteRole(r.role)} className="text-[11px] text-zinc-400 hover:text-rose-600">Delete</button>
+                  </td>
+                </tr>
+              ))}
+              {roles.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-xs text-zinc-500">No roles defined.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
   );
 }
 
@@ -2376,7 +2919,7 @@ function AutomationsView() {
       {store.automations.map((a) => {
         const active = a.status === "Active";
         return (
-          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-zinc-200 shadow-sm p-5">
+          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0">
                 <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
@@ -2471,19 +3014,141 @@ function SettingsView({ company, companyKey }: any) {
 
 function IndustryView({ view, company }: any) {
   const match = company.industry.find((m: any) => m.label === view);
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+
+  // Simulated KPIs per industry module
+  const moduleKpis: Record<string, { label: string; value: string; delta: string }[]> = {
+    "Real Estate": [
+      { label: "Active Projects", value: "8", delta: "+2" },
+      { label: "Units Sold (MTD)", value: "48", delta: "+22%" },
+      { label: "Site Visits", value: "94", delta: "+11" },
+    ],
+    "Education Suite": [
+      { label: "Admissions", value: "1,240", delta: "+18.6%" },
+      { label: "Active Students", value: "3,842", delta: "+4.1%" },
+      { label: "Fee Collection", value: "₹5.08 Cr", delta: "+9.2%" },
+    ],
+    "Facility Suite": [
+      { label: "Sites Managed", value: "14", delta: "+1" },
+      { label: "Open Ops", value: "42", delta: "-8" },
+      { label: "SLA Compliance", value: "96.4%", delta: "+1.8%" },
+    ],
+    "Admissions": [
+      { label: "Open Enquiries", value: "128", delta: "+14" },
+      { label: "Tours Booked", value: "64", delta: "+8" },
+      { label: "Conversion Rate", value: "32%", delta: "+3.2%" },
+    ],
+    "Student Management": [
+      { label: "Total Students", value: "3,842", delta: "+4.1%" },
+      { label: "Attendance Today", value: "96.2%", delta: "+0.4%" },
+      { label: "Retention Rate", value: "94%", delta: "+1.2%" },
+    ],
+    "Fee Management": [
+      { label: "Collected (Term)", value: "₹5.08 Cr", delta: "+9.2%" },
+      { label: "Overdue", value: "₹39.8 L", delta: "-12%" },
+      { label: "Collection Rate", value: "92.3%", delta: "+2.1%" },
+    ],
+    "Projects": [
+      { label: "Active Launches", value: "8", delta: "+2" },
+      { label: "Under Construction", value: "5", delta: "—" },
+      { label: "Delivered", value: "3", delta: "+1" },
+    ],
+    "Property Inventory": [
+      { label: "Total Units", value: "1,248", delta: "—" },
+      { label: "Available", value: "312", delta: "-24" },
+      { label: "Sold (MTD)", value: "48", delta: "+22%" },
+    ],
+    "Bookings": [
+      { label: "Bookings (MTD)", value: "48", delta: "+22%" },
+      { label: "Pending Agreements", value: "12", delta: "-3" },
+      { label: "Registered", value: "36", delta: "+18%" },
+    ],
+    "Site Visits": [
+      { label: "Scheduled", value: "94", delta: "+11" },
+      { label: "Completed", value: "78", delta: "+9" },
+      { label: "Conversion", value: "28%", delta: "+4.2%" },
+    ],
+    "Client Management": [
+      { label: "Active Clients", value: "68", delta: "+3" },
+      { label: "New (MTD)", value: "4", delta: "+1" },
+      { label: "Avg Contract", value: "₹12.4 L", delta: "+8%" },
+    ],
+    "Service Operations": [
+      { label: "Open Tickets", value: "42", delta: "-8" },
+      { label: "Avg Resolution", value: "4.2 hrs", delta: "-12%" },
+      { label: "SLA Compliance", value: "96.4%", delta: "+1.8%" },
+    ],
+    "Preventive Maintenance": [
+      { label: "Scheduled", value: "18", delta: "+3" },
+      { label: "Completed", value: "14", delta: "+2" },
+      { label: "Overdue", value: "2", delta: "-1" },
+    ],
+  };
+
+  const kpis = moduleKpis[view] ?? moduleKpis[match?.label ?? ""] ?? [];
+
   return (
-    <Panel title={view} subtitle={match?.meta ?? `Industry module · ${company.name}`}>
-      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {company.industry.map((m: any) => (
-          <div key={m.label} className="rounded-xl border border-zinc-200 p-4">
-            <div className="size-9 rounded-lg bg-zinc-100 grid place-items-center mb-3">
-              <m.icon className="size-4 text-zinc-700" />
+    <div className="space-y-6">
+      {kpis.length > 0 && (
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {kpis.map((k) => (
+            <div key={k.label} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+              <p className="text-xs text-zinc-500 font-medium">{k.label}</p>
+              <div className="flex items-end justify-between mt-2">
+                <p className="text-2xl font-bold tracking-tight">{k.value}</p>
+                <span className="text-xs font-semibold text-emerald-600">{k.delta}</span>
+              </div>
             </div>
-            <p className="text-sm font-semibold">{m.label}</p>
-            <p className="text-[11px] text-zinc-500 mt-1">{m.meta}</p>
-          </div>
-        ))}
-      </div>
-    </Panel>
+          ))}
+        </section>
+      )}
+
+      <Panel title={view} subtitle={match?.meta ?? `Industry module · ${company.name}`}>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {company.industry.map((m: any) => {
+            const isSelected = selectedModule === m.label;
+            return (
+              <div
+                key={m.label}
+                onClick={() => setSelectedModule(isSelected ? null : m.label)}
+                className={`rounded-xl border p-4 cursor-pointer transition-all ${isSelected ? "border-zinc-900 ring-1 ring-zinc-900 bg-zinc-50" : "border-zinc-200 hover:border-zinc-300"}`}
+              >
+                <div className="size-9 rounded-lg bg-zinc-100 grid place-items-center mb-3">
+                  <m.icon className="size-4 text-zinc-700" />
+                </div>
+                <p className="text-sm font-semibold">{m.label}</p>
+                <p className="text-[11px] text-zinc-500 mt-1">{m.meta}</p>
+                {isSelected && (
+                  <div className="mt-3 pt-3 border-t border-zinc-200 space-y-1">
+                    {(moduleKpis[m.label] ?? []).map((k) => (
+                      <div key={k.label} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-600">{k.label}</span>
+                        <span className="font-semibold">{k.value} <span className="text-emerald-600 text-[10px]">{k.delta}</span></span>
+                      </div>
+                    ))}
+                    {!moduleKpis[m.label] && <p className="text-[11px] text-zinc-400 italic">Module active</p>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+
+      <Panel title="Recent Activity" subtitle={`Latest events in ${view}`}>
+        <div className="divide-y divide-zinc-950/5">
+          {company.activity.map((a: any, i: number) => (
+            <div key={i} className="px-6 py-4 flex items-start gap-3">
+              <div className={`mt-1.5 size-2 rounded-full shrink-0 ${a.tone}`} />
+              <div className="flex-1">
+                <p className="text-sm font-semibold">{a.title}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{a.body}</p>
+              </div>
+              <span className="text-[11px] text-zinc-400 font-mono">{a.time}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
   );
 }

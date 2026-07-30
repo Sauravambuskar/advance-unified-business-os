@@ -94,12 +94,14 @@ type Store = {
   addQuotation: (q: Omit<Quotation, "id">) => void;
   deleteQuotation: (id: string) => void;
   cycleQuotation: (id: string) => void;
+  setQuotationStatus: (id: string, status: QuotationStatus) => void;
 
   // invoices
   invoices: Invoice[];
   addInvoice: (i: Omit<Invoice, "id">) => void;
   deleteInvoice: (id: string) => void;
   cycleInvoice: (id: string) => void;
+  setInvoiceStatus: (id: string, status: InvoiceStatus) => void;
 
   // tasks per company
   extraTasks: Record<string, ExtraTask[]>;
@@ -159,6 +161,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       deleteQuotation: (id) => setQuotations((prev) => prev.filter((q) => q.id !== id)),
       cycleQuotation: (id) =>
         setQuotations((prev) => prev.map((q) => (q.id === id ? { ...q, status: nextQuoteStatus(q.status) } : q))),
+      setQuotationStatus: (id, status) =>
+        setQuotations((prev) => prev.map((q) => (q.id === id ? { ...q, status } : q))),
 
       invoices,
       addInvoice: (i) =>
@@ -169,6 +173,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       deleteInvoice: (id) => setInvoices((prev) => prev.filter((i) => i.id !== id)),
       cycleInvoice: (id) =>
         setInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, status: nextInvoiceStatus(i.status) } : i))),
+      setInvoiceStatus: (id, status) =>
+        setInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i))),
 
       extraTasks,
       taskStatusOverrides,
