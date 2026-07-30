@@ -290,6 +290,8 @@ export function CallDialog({
   const [callNote, setCallNote] = useState("");
   const [leadTemp, setLeadTemp] = useState("");
   const [callbackTime, setCallbackTime] = useState<number | null>(null);
+  const [callbackDate, setCallbackDate] = useState("");
+  const [callbackTimeStr, setCallbackTimeStr] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
   const audioRef = useRef<CallAudioSession | null>(null);
@@ -416,26 +418,48 @@ export function CallDialog({
   };
 
   const submitDisposition = () => {
+    // Compute callback hours from date/time picker if set
+    let finalCallbackHours = callbackTime;
+    if (callbackDate) {
+      const dateStr = callbackTimeStr ? `${callbackDate}T${callbackTimeStr}` : `${callbackDate}T10:00`;
+      const scheduled = new Date(dateStr);
+      const diffMs = scheduled.getTime() - Date.now();
+      if (diffMs > 0) {
+        finalCallbackHours = Math.round(diffMs / 3600000);
+      }
+    }
+
     if (onDisposition) {
-      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", callbackTime);
+      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", finalCallbackHours);
     }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
     setLeadTemp("");
     setCallbackTime(null);
+    setCallbackDate("");
+    setCallbackTimeStr("");
     onClose();
   };
 
   const skipDisposition = () => {
-    if (onDisposition && (disposition || leadTemp)) {
-      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", callbackTime);
+    let finalCallbackHours = callbackTime;
+    if (callbackDate) {
+      const dateStr = callbackTimeStr ? `${callbackDate}T${callbackTimeStr}` : `${callbackDate}T10:00`;
+      const scheduled = new Date(dateStr);
+      const diffMs = scheduled.getTime() - Date.now();
+      if (diffMs > 0) finalCallbackHours = Math.round(diffMs / 3600000);
+    }
+    if (onDisposition && (disposition || leadTemp || finalCallbackHours)) {
+      onDisposition(disposition || "Follow Up", callNote, seconds, leadTemp || "Warm", finalCallbackHours);
     }
     setShowDisposition(false);
     setDisposition("");
     setCallNote("");
     setLeadTemp("");
     setCallbackTime(null);
+    setCallbackDate("");
+    setCallbackTimeStr("");
     onClose();
   };
 
@@ -640,30 +664,36 @@ export function CallDialog({
   // Disposition overlay (shown after hangup)
   const dispositionPanel = showDisposition ? (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white shadow-[0_25px_60px_rgba(0,0,0,0.15)] ring-1 ring-zinc-950/10 overflow-hidden">
         <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50">
           <p className="text-sm font-semibold">Log Call Outcome</p>
           <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {fmt(seconds)}</p>
         </div>
-        <div className="p-4 space-y-3">
+        <div className="p-5 space-y-4">
           {/* Lead Temperature */}
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => setLeadTemp("Hot")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Hot" ? "bg-red-500 text-white" : "ring-1 ring-zinc-200 hover:bg-red-50"}`}>🔥 Hot</button>
-            <button onClick={() => setLeadTemp("Warm")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Warm" ? "bg-amber-500 text-white" : "ring-1 ring-zinc-200 hover:bg-amber-50"}`}>☀️ Warm</button>
-            <button onClick={() => setLeadTemp("Cold")} className={`h-9 rounded-lg text-xs font-semibold ${leadTemp === "Cold" ? "bg-blue-500 text-white" : "ring-1 ring-zinc-200 hover:bg-blue-50"}`}>❄️ Cold</button>
+          <div>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Lead Quality</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setLeadTemp("Hot")} className={`h-10 text-xs font-semibold shadow-sm ${leadTemp === "Hot" ? "bg-red-500 text-white" : "ring-1 ring-zinc-200 hover:bg-red-50"}`}>🔥 Hot</button>
+              <button onClick={() => setLeadTemp("Warm")} className={`h-10 text-xs font-semibold shadow-sm ${leadTemp === "Warm" ? "bg-amber-500 text-white" : "ring-1 ring-zinc-200 hover:bg-amber-50"}`}>☀️ Warm</button>
+              <button onClick={() => setLeadTemp("Cold")} className={`h-10 text-xs font-semibold shadow-sm ${leadTemp === "Cold" ? "bg-blue-500 text-white" : "ring-1 ring-zinc-200 hover:bg-blue-50"}`}>❄️ Cold</button>
+            </div>
           </div>
 
           {/* Disposition */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {["Interested", "Follow Up", "No Answer", "Not Interested", "Voicemail", "Wrong Number"].map((d) => (
-              <button key={d} onClick={() => setDisposition(d)} className={`text-[11px] font-medium px-2 py-2 rounded-lg ring-1 ${disposition === d ? "bg-zinc-900 text-white ring-zinc-900" : "ring-zinc-200 hover:bg-zinc-50"}`}>{d}</button>
-            ))}
+          <div>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Disposition</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {["Interested", "Follow Up", "No Answer", "Not Interested", "Voicemail", "Wrong Number"].map((d) => (
+                <button key={d} onClick={() => setDisposition(d)} className={`text-[11px] font-medium px-2 py-2 shadow-sm ${disposition === d ? "bg-zinc-900 text-white" : "ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>{d}</button>
+              ))}
+            </div>
           </div>
 
-          {/* Schedule Callback — always visible */}
-          <div className="rounded-lg ring-1 ring-zinc-200 p-3 space-y-2 bg-zinc-50/50">
-            <p className="text-[11px] font-semibold text-zinc-700">📞 Schedule Callback</p>
-            <div className="grid grid-cols-4 gap-1.5">
+          {/* Schedule Callback with date + time */}
+          <div>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">📞 Schedule Callback</p>
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
               {[
                 { label: "1hr", hours: 1 },
                 { label: "4hr", hours: 4 },
@@ -672,28 +702,52 @@ export function CallDialog({
               ].map((opt) => (
                 <button
                   key={opt.label}
-                  onClick={() => setCallbackTime(opt.hours)}
-                  className={`text-[10px] font-semibold py-1.5 rounded-md ${callbackTime === opt.hours ? "bg-violet-600 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-violet-50"}`}
+                  onClick={() => { setCallbackTime(opt.hours); setCallbackDate(""); setCallbackTimeStr(""); }}
+                  className={`text-[10px] font-semibold py-2 shadow-sm ${callbackTime === opt.hours && !callbackDate ? "bg-violet-600 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-violet-50"}`}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-zinc-500 font-medium">Date</label>
+                <input
+                  type="date"
+                  value={callbackDate}
+                  onChange={(e) => { setCallbackDate(e.target.value); setCallbackTime(null); }}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="mt-1 w-full h-9 px-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-zinc-500 font-medium">Time</label>
+                <input
+                  type="time"
+                  value={callbackTimeStr}
+                  onChange={(e) => setCallbackTimeStr(e.target.value)}
+                  className="mt-1 w-full h-9 px-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Note */}
-          <textarea
-            value={callNote}
-            onChange={(e) => setCallNote(e.target.value)}
-            placeholder="Call note (optional)"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
-          />
+          <div>
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Note</p>
+            <textarea
+              value={callNote}
+              onChange={(e) => setCallNote(e.target.value)}
+              placeholder="Call note (optional)"
+              rows={2}
+              className="w-full px-3 py-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
+            />
+          </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
-            <button onClick={skipDisposition} className="flex-1 h-9 rounded-lg ring-1 ring-zinc-200 text-xs font-semibold hover:bg-zinc-50">Skip</button>
-            <button onClick={submitDisposition} className="flex-1 h-9 rounded-lg bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800">Save</button>
+          <div className="flex gap-2 pt-1">
+            <button onClick={skipDisposition} className="flex-1 h-10 ring-1 ring-zinc-200 text-sm font-semibold hover:bg-zinc-50 shadow-sm">Skip</button>
+            <button onClick={submitDisposition} className="flex-1 h-10 bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 shadow-sm">Save</button>
           </div>
         </div>
       </div>
