@@ -14,8 +14,11 @@ import {
   TASK_TONE,
   LEAD_STAGES,
   LEAD_STAGE_TONE,
+  DISPOSITION_TONE,
+  CALL_DISPOSITIONS,
   type LeadStage,
   type TaskStatus,
+  type CallDisposition,
 } from "@/lib/app-store";
 import { toast } from "sonner";
 
@@ -1400,6 +1403,73 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
     toast.success(`Calling ${lead.name}`, { description: lead.phone });
     setOpen(true);
   };
+
+  const handleDisposition = (disposition: string, note: string, duration: number) => {
+    // Update the last call log with disposition
+    const lastLog = store.callLogs.find((c) => c.leadKey === key);
+    if (lastLog) {
+      store.updateCallDisposition(key, lastLog.at, disposition as CallDisposition, note);
+    }
+
+    // Run call automations based on disposition
+    const enabledRules = store.callRules.filter((r) => r.enabled);
+
+    enabledRules.forEach((rule) => {
+      if (rule.trigger === "after_call") {
+        if (rule.action === "create_task") {
+          store.addTask(companyKey, {
+            name: `Follow up: ${lead.name}`,
+            owner: "You",
+            due: "Tomorrow",
+            status: "Pending",
+          });
+          toast.success("Auto-created follow-up task", { description: lead.name });
+        }
+        if (rule.action === "send_sms" && rule.config.disposition === disposition) {
+          const msg = (rule.config.template || "Thanks for your time, {name}!")
+            .replace("{name}", lead.name.split(" ")[0])
+            .replace("{company}", companyName);
+          toast.success("WhatsApp sent", { description: msg.slice(0, 60) + "…" });
+        }
+        if (rule.action === "advance_stage") {
+          const currentStage = store.leadStages[companyKey]?.[key] ?? lead.stage;
+          if (currentStage === (rule.config.fromStage || "New")) {
+            store.setLeadStage(companyKey, key, (rule.config.toStage || "Contacted") as LeadStage);
+          }
+        }
+      }
+      if (rule.trigger === "no_answer" && disposition === "No Answer") {
+        if (rule.action === "schedule_callback") {
+          const delayHrs = parseInt(rule.config.delayHours || "4", 10);
+          store.scheduleCallback({
+            leadKey: key,
+            name: lead.name,
+            phone: lead.phone,
+            company: companyName,
+            scheduledAt: new Date(Date.now() + delayHrs * 3600000).toISOString(),
+            note: rule.config.note || `Auto-scheduled: no answer after ${duration}s call`,
+          });
+          toast.success("Callback scheduled", { description: `${lead.name} in ${delayHrs}h` });
+        }
+      }
+    });
+
+    // Auto-schedule callback if disposition is "Callback Scheduled"
+    if (disposition === "Callback Scheduled") {
+      store.scheduleCallback({
+        leadKey: key,
+        name: lead.name,
+        phone: lead.phone,
+        company: companyName,
+        scheduledAt: new Date(Date.now() + 24 * 3600000).toISOString(),
+        note: note || "Callback requested by lead",
+      });
+      toast.success("Callback scheduled for tomorrow");
+    }
+
+    store.bumpUnread();
+  };
+
   return (
     <>
       <button
@@ -1422,6 +1492,7 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
         phone={lead.phone || "+91 00000 00000"}
         company={companyName}
         photo={lead.photo || lead.avatar || `https://i.pravatar.cc/240?u=${encodeURIComponent(lead.name)}`}
+        onDisposition={handleDisposition}
       />
     </>
   );
@@ -2914,41 +2985,265 @@ function RolesView() {
 
 function AutomationsView() {
   const store = useAppStore();
+  const [addOpen, setAddOpen] = useState(false);
+  const [ruleAddOpen, setRuleAddOpen] = useState(false);
+  const [newAuto, setNewAuto] = useState({ name: "", trigger: "", category: "general" as "general" | "call" });
+  const [newRule, setNewRule] = useState({ name: "", trigger: "after_call" as any, action: "create_task" as any });
+  const [callLogView, setCallLogView] = useState(false);
+  const [callbackView, setCallbackView] = useState(false);
+
+  const callAutomations = store.automations.filter((a) => a.category === "call");
+  const generalAutomations = store.automations.filter((a) => a.category !== "call");
+  const pendingCallbacks = store.scheduledCallbacks.filter((cb) => cb.status === "Pending");
+
+  const addAutomation = () => {
+    if (!newAuto.name.trim()) { toast.error("Name required"); return; }
+    store.addAutomation({ name: newAuto.name.trim(), trigger: newAuto.trigger.trim() || "Manual", category: newAuto.category });
+    setNewAuto({ name: "", trigger: "", category: "general" });
+    setAddOpen(false);
+    toast.success("Automation added");
+  };
+
+  const addRule = () => {
+    if (!newRule.name.trim()) { toast.error("Name required"); return; }
+    store.addCallRule({ name: newRule.name.trim(), trigger: newRule.trigger, action: newRule.action, config: {}, enabled: true });
+    setNewRule({ name: "", trigger: "after_call", action: "create_task" });
+    setRuleAddOpen(false);
+    toast.success("Call rule added");
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {store.automations.map((a) => {
-        const active = a.status === "Active";
-        return (
-          <div key={a.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="size-10 rounded-lg bg-zinc-100 grid place-items-center shrink-0">
-                  <Zap className="size-4 text-zinc-700" />
+    <div className="space-y-6">
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4">
+          <p className="text-[10px] text-zinc-500 font-semibold uppercase">Total Calls</p>
+          <p className="text-2xl font-bold mt-1">{store.callLogs.length}</p>
+        </div>
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4">
+          <p className="text-[10px] text-zinc-500 font-semibold uppercase">Pending Callbacks</p>
+          <p className="text-2xl font-bold mt-1 text-amber-600">{pendingCallbacks.length}</p>
+        </div>
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4">
+          <p className="text-[10px] text-zinc-500 font-semibold uppercase">Active Call Rules</p>
+          <p className="text-2xl font-bold mt-1 text-emerald-600">{store.callRules.filter((r) => r.enabled).length}</p>
+        </div>
+        <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4">
+          <p className="text-[10px] text-zinc-500 font-semibold uppercase">Active Automations</p>
+          <p className="text-2xl font-bold mt-1">{store.automations.filter((a) => a.status === "Active").length}</p>
+        </div>
+      </div>
+
+      {/* Tabs: Call Automations / Callbacks / Call Log / General */}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => { setCallLogView(false); setCallbackView(false); }} className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${!callLogView && !callbackView ? "bg-zinc-900 text-white" : "bg-white ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
+          <Zap className="size-3 inline mr-1" />Call Automations
+        </button>
+        <button onClick={() => { setCallbackView(true); setCallLogView(false); }} className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${callbackView ? "bg-zinc-900 text-white" : "bg-white ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
+          <Phone className="size-3 inline mr-1" />Scheduled Callbacks ({pendingCallbacks.length})
+        </button>
+        <button onClick={() => { setCallLogView(true); setCallbackView(false); }} className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${callLogView ? "bg-zinc-900 text-white" : "bg-white ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
+          <Activity className="size-3 inline mr-1" />Call Log ({store.callLogs.length})
+        </button>
+      </div>
+
+      {/* Scheduled Callbacks */}
+      {callbackView && (
+        <Panel title="Scheduled Callbacks" subtitle="Upcoming callbacks from call automations">
+          <div className="divide-y divide-zinc-200">
+            {pendingCallbacks.length === 0 ? (
+              <p className="px-6 py-8 text-center text-xs text-zinc-500 italic">No pending callbacks</p>
+            ) : (
+              pendingCallbacks.map((cb) => (
+                <div key={cb.id} className="px-6 py-4 flex items-center gap-4">
+                  <div className="size-10 rounded-full bg-amber-100 grid place-items-center shrink-0">
+                    <Phone className="size-4 text-amber-700" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{cb.name}</p>
+                    <p className="text-xs text-zinc-500">{cb.phone} · {cb.company}</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">{cb.note}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-mono text-zinc-600">{new Date(cb.scheduledAt).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}</p>
+                    <div className="flex gap-1 mt-1">
+                      <button onClick={() => { store.completeCallback(cb.id); toast.success("Marked complete"); }} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">Done</button>
+                      <button onClick={() => { store.dismissCallback(cb.id); toast.success("Dismissed"); }} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 hover:bg-zinc-200">Skip</button>
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{a.name}</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  store.toggleAutomation(a.name);
-                  toast.success(active ? "Paused" : "Activated");
-                }}
-                role="switch"
-                aria-checked={active}
-                className={`relative h-6 w-11 rounded-full transition-colors shrink-0 ${active ? "bg-[#34A853]" : "bg-zinc-300"}`}
-                title={active ? "Pause" : "Activate"}
-              >
-                <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${active ? "left-[22px]" : "left-0.5"}`} />
-              </button>
-            </div>
-            <p className={`mt-3 text-[10px] font-semibold ${active ? "text-emerald-600" : "text-zinc-500"}`}>
-              {a.status}
-            </p>
+              ))
+            )}
           </div>
-        );
-      })}
+        </Panel>
+      )}
+
+      {/* Call Log */}
+      {callLogView && (
+        <Panel title="Call History" subtitle="All calls made from the dialer · latest first">
+          <div className="divide-y divide-zinc-200">
+            {store.callLogs.length === 0 ? (
+              <p className="px-6 py-8 text-center text-xs text-zinc-500 italic">No calls yet. Use the dialer to make calls.</p>
+            ) : (
+              store.callLogs.slice(0, 50).map((log, i) => (
+                <div key={i} className="px-6 py-3 flex items-center gap-4">
+                  <div className="size-9 rounded-full bg-zinc-100 grid place-items-center shrink-0">
+                    <Phone className="size-3.5 text-zinc-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{log.name}</p>
+                    <p className="text-[11px] text-zinc-500">{log.phone} · {log.company}</p>
+                  </div>
+                  {log.disposition && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ring-1 ${(DISPOSITION_TONE as any)[log.disposition] ?? "bg-zinc-100 text-zinc-700 ring-zinc-200"}`}>
+                      {log.disposition}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-zinc-400 font-mono shrink-0">{new Date(log.at).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </Panel>
+      )}
+
+      {/* Call Automation Rules */}
+      {!callLogView && !callbackView && (
+        <>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Call Automation Rules</h3>
+            <button onClick={() => setRuleAddOpen(true)} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800">
+              <Plus className="size-3.5" /> New Rule
+            </button>
+          </div>
+
+          {ruleAddOpen && (
+            <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 space-y-3">
+              <p className="text-sm font-semibold">New Call Automation Rule</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input value={newRule.name} onChange={(e) => setNewRule({ ...newRule, name: e.target.value })} placeholder="Rule name" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+                <select value={newRule.trigger} onChange={(e) => setNewRule({ ...newRule, trigger: e.target.value })} className="h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                  <option value="after_call">After call ends</option>
+                  <option value="missed_call">Missed call</option>
+                  <option value="no_answer">No answer</option>
+                  <option value="callback_due">Callback due</option>
+                  <option value="follow_up_overdue">Follow-up overdue</option>
+                </select>
+                <select value={newRule.action} onChange={(e) => setNewRule({ ...newRule, action: e.target.value })} className="h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                  <option value="create_task">Create task</option>
+                  <option value="send_sms">Send SMS/WhatsApp</option>
+                  <option value="advance_stage">Advance lead stage</option>
+                  <option value="notify">Send notification</option>
+                  <option value="schedule_callback">Schedule callback</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={addRule} className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">Create</button>
+                <button onClick={() => setRuleAddOpen(false)} className="text-xs font-semibold px-4 py-2 rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {store.callRules.map((rule) => (
+              <div key={rule.id} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className={`size-10 rounded-lg grid place-items-center shrink-0 ${rule.enabled ? "bg-emerald-100" : "bg-zinc-100"}`}>
+                      <Phone className={`size-4 ${rule.enabled ? "text-emerald-700" : "text-zinc-500"}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{rule.name}</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">When: {rule.trigger.replace(/_/g, " ")} → {rule.action.replace(/_/g, " ")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => store.toggleCallRule(rule.id)}
+                      role="switch"
+                      aria-checked={rule.enabled}
+                      className={`relative h-6 w-11 rounded-full transition-colors ${rule.enabled ? "bg-[#34A853]" : "bg-zinc-300"}`}
+                    >
+                      <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${rule.enabled ? "left-[22px]" : "left-0.5"}`} />
+                    </button>
+                    <button onClick={() => { store.deleteCallRule(rule.id); toast.success("Deleted"); }} className="text-[11px] text-zinc-400 hover:text-rose-600">✕</button>
+                  </div>
+                </div>
+                {Object.keys(rule.config).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-zinc-100 space-y-1">
+                    {Object.entries(rule.config).map(([k, v]) => (
+                      <p key={k} className="text-[10px] text-zinc-500"><span className="font-medium text-zinc-700">{k}:</span> {v}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* General Automations section */}
+          <div className="flex items-center justify-between mt-4">
+            <h3 className="text-sm font-semibold">General Automations</h3>
+            <button onClick={() => setAddOpen(true)} className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50">
+              <Plus className="size-3.5" /> New
+            </button>
+          </div>
+
+          {addOpen && (
+            <div className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 space-y-3">
+              <p className="text-sm font-semibold">New Automation</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input value={newAuto.name} onChange={(e) => setNewAuto({ ...newAuto, name: e.target.value })} placeholder="Automation name" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+                <input value={newAuto.trigger} onChange={(e) => setNewAuto({ ...newAuto, trigger: e.target.value })} placeholder="Trigger (e.g. New lead)" className="h-9 px-3 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10" />
+                <select value={newAuto.category} onChange={(e) => setNewAuto({ ...newAuto, category: e.target.value as any })} className="h-9 px-3 rounded-lg border border-zinc-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10">
+                  <option value="general">General</option>
+                  <option value="call">Call</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={addAutomation} className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800">Create</button>
+                <button onClick={() => setAddOpen(false)} className="text-xs font-semibold px-4 py-2 rounded-lg ring-1 ring-zinc-200 hover:bg-zinc-50">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...callAutomations, ...generalAutomations].map((a) => {
+              const active = a.status === "Active";
+              const isCall = a.category === "call";
+              return (
+                <div key={a.name} className="bg-white rounded-2xl ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`size-10 rounded-lg grid place-items-center shrink-0 ${isCall ? "bg-green-100" : "bg-zinc-100"}`}>
+                        {isCall ? <Phone className="size-4 text-green-700" /> : <Zap className="size-4 text-zinc-700" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{a.name}</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">Trigger: {a.trigger}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => { store.toggleAutomation(a.name); toast.success(active ? "Paused" : "Activated"); }}
+                        role="switch"
+                        aria-checked={active}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${active ? "bg-[#34A853]" : "bg-zinc-300"}`}
+                      >
+                        <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${active ? "left-[22px]" : "left-0.5"}`} />
+                      </button>
+                      <button onClick={() => { store.deleteAutomation(a.name); toast.success("Deleted"); }} className="text-[11px] text-zinc-400 hover:text-rose-600">✕</button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <p className={`text-[10px] font-semibold ${active ? "text-emerald-600" : "text-zinc-500"}`}>{a.status}</p>
+                    {isCall && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700">CALL</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -13,7 +13,31 @@ export type ExtraLead = {
   initials: string; tone: string; stage: string; stageTone: string;
 };
 export type CompanySettings = { timezone: string; currency: string };
-export type AutomationItem = { name: string; trigger: string; status: "Active" | "Paused" };
+export type AutomationItem = { name: string; trigger: string; status: "Active" | "Paused"; category?: "general" | "call" };
+
+// Call automation types
+export type CallDisposition = "Interested" | "Not Interested" | "Follow Up" | "No Answer" | "Wrong Number" | "Voicemail" | "Callback Scheduled";
+export type ScheduledCallback = { id: string; leadKey: string; name: string; phone: string; company: string; scheduledAt: string; note: string; status: "Pending" | "Completed" | "Missed" };
+export type CallAutomationRule = {
+  id: string;
+  name: string;
+  trigger: "after_call" | "missed_call" | "no_answer" | "callback_due" | "follow_up_overdue";
+  action: "create_task" | "send_sms" | "advance_stage" | "notify" | "schedule_callback";
+  config: Record<string, string>;
+  enabled: boolean;
+};
+
+export const CALL_DISPOSITIONS: CallDisposition[] = ["Interested", "Not Interested", "Follow Up", "No Answer", "Wrong Number", "Voicemail", "Callback Scheduled"];
+
+export const DISPOSITION_TONE: Record<CallDisposition, string> = {
+  "Interested": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "Not Interested": "bg-rose-50 text-rose-700 ring-rose-200",
+  "Follow Up": "bg-amber-50 text-amber-700 ring-amber-200",
+  "No Answer": "bg-zinc-100 text-zinc-700 ring-zinc-200",
+  "Wrong Number": "bg-red-50 text-red-700 ring-red-200",
+  "Voicemail": "bg-blue-50 text-blue-700 ring-blue-200",
+  "Callback Scheduled": "bg-violet-50 text-violet-700 ring-violet-200",
+};
 
 export const QUOTE_TONE: Record<QuotationStatus, string> = {
   Draft: "bg-zinc-100 text-zinc-700 ring-zinc-200",
@@ -46,7 +70,7 @@ export const LEAD_STAGE_TONE: Record<LeadStage, string> = {
   Won: "bg-[#34A853] text-white ring-[#34A853]/30",
   Lost: "bg-[#EA4335] text-white ring-[#EA4335]/30",
 };
-export type CallLog = { leadKey: string; name: string; phone: string; company: string; at: string };
+export type CallLog = { leadKey: string; name: string; phone: string; company: string; at: string; duration?: number; disposition?: CallDisposition; note?: string };
 
 const nextIn = <T,>(arr: readonly T[], cur: T): T => {
   const i = arr.indexOf(cur);
@@ -77,10 +101,24 @@ const INIT_INVOICES: Invoice[] = [
   { id: "INV-2051", client: "Meridian HQ", amount: "₹35.4 L", status: "Draft", due: "Jul 15" },
 ];
 const INIT_AUTOMATIONS: AutomationItem[] = [
-  { name: "Auto-assign leads by source", trigger: "New lead", status: "Active" },
-  { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active" },
-  { name: "Escalate approvals > ₹8.3 L", trigger: "Quotation submitted", status: "Active" },
-  { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused" },
+  { name: "Auto-assign leads by source", trigger: "New lead", status: "Active", category: "general" },
+  { name: "Send invoice reminder at T+3", trigger: "Invoice overdue", status: "Active", category: "general" },
+  { name: "Escalate approvals > ₹8.3 L", trigger: "Quotation submitted", status: "Active", category: "general" },
+  { name: "Weekly executive digest", trigger: "Monday 08:00", status: "Paused", category: "general" },
+  { name: "Auto-create follow-up task after call", trigger: "Call ended", status: "Active", category: "call" },
+  { name: "Send WhatsApp summary after call", trigger: "Call ended · Interested", status: "Active", category: "call" },
+  { name: "Schedule callback if no answer", trigger: "Disposition: No Answer", status: "Active", category: "call" },
+  { name: "Advance lead to Contacted on first call", trigger: "First call made", status: "Active", category: "call" },
+  { name: "Notify manager on 3+ missed follow-ups", trigger: "Follow-up overdue × 3", status: "Active", category: "call" },
+  { name: "Auto-SMS reminder 1hr before callback", trigger: "Callback scheduled", status: "Paused", category: "call" },
+];
+
+const INIT_CALL_RULES: CallAutomationRule[] = [
+  { id: "cr-1", name: "Create follow-up task", trigger: "after_call", action: "create_task", config: { delay: "0", taskTitle: "Follow up: {name}", assignTo: "caller" }, enabled: true },
+  { id: "cr-2", name: "Auto-advance stage on first call", trigger: "after_call", action: "advance_stage", config: { fromStage: "New", toStage: "Contacted" }, enabled: true },
+  { id: "cr-3", name: "Schedule callback on no-answer", trigger: "no_answer", action: "schedule_callback", config: { delayHours: "4", note: "Auto-scheduled: no answer" }, enabled: true },
+  { id: "cr-4", name: "Send WhatsApp after interested call", trigger: "after_call", action: "send_sms", config: { disposition: "Interested", template: "Hi {name}, thanks for your time! As discussed, I'll send the proposal shortly. — {company}" }, enabled: true },
+  { id: "cr-5", name: "Notify on missed callbacks", trigger: "callback_due", action: "notify", config: { message: "Callback overdue for {name} ({phone})" }, enabled: true },
 ];
 
 // ------------ Context ------------
@@ -119,10 +157,25 @@ type Store = {
   cycleLeadStage: (companyKey: string, leadKey: string, current: string) => void;
   callLogs: CallLog[];
   logCall: (entry: Omit<CallLog, "at">) => void;
+  updateCallDisposition: (leadKey: string, at: string, disposition: CallDisposition, note?: string) => void;
+
+  // scheduled callbacks
+  scheduledCallbacks: ScheduledCallback[];
+  scheduleCallback: (cb: Omit<ScheduledCallback, "id" | "status">) => void;
+  completeCallback: (id: string) => void;
+  dismissCallback: (id: string) => void;
+
+  // call automation rules
+  callRules: CallAutomationRule[];
+  toggleCallRule: (id: string) => void;
+  addCallRule: (rule: Omit<CallAutomationRule, "id">) => void;
+  deleteCallRule: (id: string) => void;
 
   // automations
   automations: AutomationItem[];
   toggleAutomation: (name: string) => void;
+  addAutomation: (a: Omit<AutomationItem, "status">) => void;
+  deleteAutomation: (name: string) => void;
 
   // settings per company
   settings: Record<string, CompanySettings>;
@@ -148,6 +201,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(3);
   const [leadStages, setLeadStages] = useState<Record<string, Record<string, LeadStage>>>({});
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+  const [scheduledCallbacks, setScheduledCallbacks] = useState<ScheduledCallback[]>([]);
+  const [callRules, setCallRules] = useState<CallAutomationRule[]>(INIT_CALL_RULES);
 
   const value = useMemo<Store>(
     () => ({
@@ -200,12 +255,34 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       callLogs,
       logCall: (entry) =>
         setCallLogs((prev) => [{ ...entry, at: new Date().toISOString() }, ...prev].slice(0, 200)),
+      updateCallDisposition: (leadKey, at, disposition, note) =>
+        setCallLogs((prev) => prev.map((c) => c.leadKey === leadKey && c.at === at ? { ...c, disposition, note: note ?? c.note } : c)),
+
+      scheduledCallbacks,
+      scheduleCallback: (cb) =>
+        setScheduledCallbacks((prev) => [{ ...cb, id: `cb-${Date.now()}`, status: "Pending" }, ...prev]),
+      completeCallback: (id) =>
+        setScheduledCallbacks((prev) => prev.map((cb) => cb.id === id ? { ...cb, status: "Completed" } : cb)),
+      dismissCallback: (id) =>
+        setScheduledCallbacks((prev) => prev.filter((cb) => cb.id !== id)),
+
+      callRules,
+      toggleCallRule: (id) =>
+        setCallRules((prev) => prev.map((r) => r.id === id ? { ...r, enabled: !r.enabled } : r)),
+      addCallRule: (rule) =>
+        setCallRules((prev) => [...prev, { ...rule, id: `cr-${Date.now()}` }]),
+      deleteCallRule: (id) =>
+        setCallRules((prev) => prev.filter((r) => r.id !== id)),
 
       automations,
       toggleAutomation: (name) =>
         setAutomations((prev) =>
           prev.map((a) => (a.name === name ? { ...a, status: a.status === "Active" ? "Paused" : "Active" } : a)),
         ),
+      addAutomation: (a) =>
+        setAutomations((prev) => [...prev, { ...a, status: "Active" }]),
+      deleteAutomation: (name) =>
+        setAutomations((prev) => prev.filter((a) => a.name !== name)),
 
       settings,
       updateSettings: (k, patch) =>
@@ -218,7 +295,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       bumpUnread: (n = 1) => setUnreadCount((c) => c + n),
       markAllRead: () => setUnreadCount(0),
     }),
-    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, leadStages, callLogs, automations, settings, unreadCount],
+    [search, quotations, invoices, extraTasks, taskStatusOverrides, extraLeads, leadStages, callLogs, scheduledCallbacks, callRules, automations, settings, unreadCount],
   );
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

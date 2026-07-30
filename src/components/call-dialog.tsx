@@ -269,6 +269,7 @@ export function CallDialog({
   phone,
   company,
   photo,
+  onDisposition,
 }: {
   open: boolean;
   onClose: () => void;
@@ -276,6 +277,7 @@ export function CallDialog({
   phone: string;
   company: string;
   photo?: string;
+  onDisposition?: (disposition: string, note: string, duration: number) => void;
 }) {
   const [phase, setPhase] = useState<"dialing" | "connected" | "ended">("dialing");
   const [seconds, setSeconds] = useState(0);
@@ -283,6 +285,9 @@ export function CallDialog({
   const [speaker, setSpeaker] = useState(true);
   const [held, setHeld] = useState(false);
   const [transcript, setTranscript] = useState<Line[]>([]);
+  const [showDisposition, setShowDisposition] = useState(false);
+  const [disposition, setDisposition] = useState("");
+  const [callNote, setCallNote] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
   const audioRef = useRef<CallAudioSession | null>(null);
@@ -400,8 +405,29 @@ export function CallDialog({
       window.clearInterval(t);
     });
     timersRef.current = [];
-    // Close dialog after brief delay
-    setTimeout(onClose, 600);
+    // Show disposition dialog instead of closing immediately
+    if (onDisposition && seconds > 0) {
+      setShowDisposition(true);
+    } else {
+      setTimeout(onClose, 600);
+    }
+  };
+
+  const submitDisposition = () => {
+    if (onDisposition) {
+      onDisposition(disposition || "Follow Up", callNote, seconds);
+    }
+    setShowDisposition(false);
+    setDisposition("");
+    setCallNote("");
+    onClose();
+  };
+
+  const skipDisposition = () => {
+    setShowDisposition(false);
+    setDisposition("");
+    setCallNote("");
+    onClose();
   };
 
   // ─── Sentiment analysis ─────────────────────────────────────────────────
@@ -602,7 +628,70 @@ export function CallDialog({
     </div>
   );
 
-  return typeof document !== "undefined" ? createPortal(content, document.body) : content;
+  // Disposition overlay (shown after hangup)
+  const dispositionPanel = showDisposition ? (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50">
+          <p className="text-sm font-semibold">Call Ended · Log Outcome</p>
+          <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {phone} · Duration: {fmt(seconds)}</p>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-zinc-600 mb-2">Call Disposition</p>
+            <div className="grid grid-cols-2 gap-2">
+              {["Interested", "Not Interested", "Follow Up", "No Answer", "Voicemail", "Callback Scheduled", "Wrong Number"].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDisposition(d)}
+                  className={`text-xs font-medium px-3 py-2 rounded-lg ring-1 transition-colors ${
+                    disposition === d
+                      ? "bg-zinc-900 text-white ring-zinc-900"
+                      : "bg-white ring-zinc-200 text-zinc-700 hover:bg-zinc-50"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-zinc-600 mb-1">Call Note</p>
+            <textarea
+              value={callNote}
+              onChange={(e) => setCallNote(e.target.value)}
+              placeholder="Quick summary of what was discussed…"
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={skipDisposition}
+              className="flex-1 h-10 rounded-lg ring-1 ring-zinc-200 text-sm font-semibold hover:bg-zinc-50"
+            >
+              Skip
+            </button>
+            <button
+              onClick={submitDisposition}
+              className="flex-1 h-10 rounded-lg bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800"
+            >
+              Save & Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const finalContent = (
+    <>
+      {content}
+      {dispositionPanel}
+    </>
+  );
+
+  return typeof document !== "undefined" ? createPortal(finalContent, document.body) : finalContent;
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
