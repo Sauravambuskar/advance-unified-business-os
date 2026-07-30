@@ -352,6 +352,115 @@ function getGreeting() {
   return "Good evening";
 }
 
+// ─── Today's Actions Command Center ──────────────────────────────────────
+function TodaysActions({ companyKey, company, onNavigate }: { companyKey: string; company: any; onNavigate: (v: string) => void }) {
+  const store = useAppStore();
+  const pendingCallbacks = store.scheduledCallbacks.filter((cb) => cb.status === "Pending");
+  const hotLeads = store.callLogs.filter((c) => c.temperature === "Hot");
+  const todayTasks = company.tasks.filter((t: any) => t.due === "Today" || t.status === "In Progress");
+  const overdueInvoices = store.invoices.filter((i) => i.status === "Overdue");
+  const recentNoAnswer = store.callLogs.filter((c) => c.disposition === "No Answer").slice(0, 5);
+
+  const totalActions = pendingCallbacks.length + todayTasks.length + overdueInvoices.length + recentNoAnswer.length;
+
+  if (totalActions === 0) return null;
+
+  return (
+    <div className="col-span-full bg-white ring-1 ring-zinc-950/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="size-8 bg-amber-100 grid place-items-center"><Zap className="size-4 text-amber-700" /></div>
+          <div>
+            <p className="text-sm font-semibold">Today's Actions</p>
+            <p className="text-[10px] text-zinc-500">{totalActions} items need your attention</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {/* Pending Callbacks */}
+        {pendingCallbacks.length > 0 && (
+          <div className="ring-1 ring-zinc-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-violet-700 uppercase">📞 Callbacks Due</p>
+              <span className="text-[10px] font-bold bg-violet-100 text-violet-700 px-1.5 py-0.5">{pendingCallbacks.length}</span>
+            </div>
+            {pendingCallbacks.slice(0, 3).map((cb) => (
+              <div key={cb.id} className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium truncate">{cb.name}</p>
+                  <p className="text-[10px] text-zinc-500">{cb.phone}</p>
+                </div>
+                <button onClick={() => { store.completeCallback(cb.id); toast.success("Done"); }} className="text-[9px] font-semibold px-1.5 py-0.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 shrink-0">✓</button>
+              </div>
+            ))}
+            {pendingCallbacks.length > 3 && <button onClick={() => onNavigate("Automations")} className="text-[10px] text-violet-600 font-semibold hover:underline">+{pendingCallbacks.length - 3} more →</button>}
+          </div>
+        )}
+
+        {/* Today's Tasks */}
+        {todayTasks.length > 0 && (
+          <div className="ring-1 ring-zinc-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-amber-700 uppercase">✅ Tasks Due Today</p>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5">{todayTasks.length}</span>
+            </div>
+            {todayTasks.slice(0, 3).map((t: any, i: number) => (
+              <div key={i} className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium truncate">{t.name}</p>
+                <p className="text-[10px] text-zinc-500 shrink-0">{t.owner}</p>
+              </div>
+            ))}
+            {todayTasks.length > 3 && <button onClick={() => onNavigate("Task Management")} className="text-[10px] text-amber-600 font-semibold hover:underline">View all →</button>}
+          </div>
+        )}
+
+        {/* Overdue Invoices */}
+        {overdueInvoices.length > 0 && (
+          <div className="ring-1 ring-zinc-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-rose-700 uppercase">💰 Overdue Payments</p>
+              <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5">{overdueInvoices.length}</span>
+            </div>
+            {overdueInvoices.slice(0, 3).map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium truncate">{inv.client}</p>
+                <p className="text-[10px] font-mono text-rose-600 shrink-0">{inv.amount}</p>
+              </div>
+            ))}
+            {overdueInvoices.length > 3 && <button onClick={() => onNavigate("Invoicing")} className="text-[10px] text-rose-600 font-semibold hover:underline">View all →</button>}
+          </div>
+        )}
+
+        {/* No Answer — needs retry */}
+        {recentNoAnswer.length > 0 && (
+          <div className="ring-1 ring-zinc-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-zinc-700 uppercase">🔁 Retry Calls</p>
+              <span className="text-[10px] font-bold bg-zinc-100 text-zinc-700 px-1.5 py-0.5">{recentNoAnswer.length}</span>
+            </div>
+            {recentNoAnswer.slice(0, 3).map((c, i) => (
+              <div key={i} className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium truncate">{c.name}</p>
+                <a href={`tel:${c.phone}`} className="text-[9px] font-semibold px-1.5 py-0.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 shrink-0">Call</a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── WhatsApp Templates ──────────────────────────────────────────────────
+const WHATSAPP_TEMPLATES = [
+  { id: "proposal", label: "Send Proposal Follow-up", message: "Hi {name}, following up on the proposal we shared. Would love to discuss any questions you may have. When's a good time to connect?" },
+  { id: "meeting", label: "Meeting Confirmation", message: "Hi {name}, confirming our meeting scheduled for tomorrow. Looking forward to connecting with you." },
+  { id: "payment", label: "Payment Reminder", message: "Hi {name}, this is a friendly reminder regarding the pending payment of {amount}. Please let us know if you need any assistance." },
+  { id: "thankyou", label: "Thank You", message: "Hi {name}, thank you for your time today. As discussed, I'll send over the details shortly. Feel free to reach out anytime." },
+  { id: "intro", label: "Introduction", message: "Hi {name}, this is {company}. We'd love to explore how we can help your business grow. Would you be open to a quick 10-min call this week?" },
+];
+
 function Dashboard() {
   const [companyKey, setCompanyKey] = useState<CompanyKey>("group");
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -734,6 +843,12 @@ function Dashboard() {
 
             {/* KPI cards */}
             <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+            {/* Today's Actions — command center */}
+            <TodaysActions companyKey={companyKey} company={company} onNavigate={setActiveView} />
+
+            </section>
+            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {company.kpis.map((k) => (
                 <div
                   key={k.label}
@@ -844,11 +959,26 @@ function Dashboard() {
                               {l.message}
                             </td>
                             <td className="px-6 py-3.5 text-right">
-                              <div className="inline-flex items-center gap-1.5">
+                              <div className="inline-flex items-center gap-1">
                                 <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
-                                <button className="inline-flex size-7 items-center justify-center rounded-md hover:bg-zinc-100">
-                                  <MoreHorizontal className="size-4 text-zinc-400" />
-                                </button>
+                                <a
+                                  href={`https://wa.me/${(l.phone || "").replace(/[^\d+]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`WhatsApp ${l.name}`}
+                                  className="inline-flex size-8 items-center justify-center bg-[#25D366] text-white hover:bg-[#1da851] shadow-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.116.553 4.104 1.515 5.834L0 24l6.335-1.66A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-1.97 0-3.837-.53-5.445-1.452l-.39-.232-3.758.985.994-3.648-.254-.403A9.71 9.71 0 012.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75z"/></svg>
+                                </a>
+                                <a
+                                  href={`mailto:${l.email}`}
+                                  title={`Email ${l.name}`}
+                                  className="inline-flex size-8 items-center justify-center bg-[#4285F4] text-white hover:bg-[#3367d6] shadow-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                </a>
                               </div>
                             </td>
                           </tr>
@@ -1547,44 +1677,118 @@ function Panel({ title, subtitle, children }: any) {
 }
 
 function CRMView({ company, companyKey }: any) {
+  const store = useAppStore();
+  const [filter, setFilter] = useState("All");
+  const [templateOpen, setTemplateOpen] = useState<string | null>(null);
+
+  const leads = company.leads.filter((l: any) => {
+    if (filter === "All") return true;
+    const key = leadKeyOf(l);
+    const log = store.callLogs.find((c) => c.leadKey === key);
+    if (filter === "Hot") return log?.temperature === "Hot";
+    if (filter === "Warm") return log?.temperature === "Warm";
+    if (filter === "Cold") return log?.temperature === "Cold";
+    if (filter === "No Answer") return log?.disposition === "No Answer";
+    if (filter === "Interested") return log?.disposition === "Interested";
+    return true;
+  });
+
+  const sendWhatsApp = (phone: string, name: string, templateId: string) => {
+    const tmpl = WHATSAPP_TEMPLATES.find((t) => t.id === templateId);
+    if (!tmpl) return;
+    const msg = tmpl.message.replace(/\{name\}/g, name.split(" ")[0]).replace(/\{company\}/g, company.name).replace(/\{amount\}/g, "—");
+    const encoded = encodeURIComponent(msg);
+    const cleanPhone = phone.replace(/[^\d+]/g, "");
+    window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, "_blank");
+    toast.success("WhatsApp opened", { description: tmpl.label });
+    setTemplateOpen(null);
+  };
+
   return (
-    <Panel title="Contacts & Accounts" subtitle="All customer records for this company · click phone to call, stage chip to advance">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-              <th className="px-6 py-3">Contact</th>
-              <th className="px-6 py-3">Email</th>
-              <th className="px-6 py-3">Phone</th>
-              <th className="px-6 py-3">Account</th>
-              <th className="px-6 py-3">Stage</th>
-              <th className="px-6 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-950/5">
-            {company.leads.map((l: any) => (
-              <tr key={l.name} className="hover:bg-zinc-50/60">
-                <td className="px-6 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <img src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`} alt={l.name} className="size-9 rounded-full object-cover ring-1 ring-zinc-200 shrink-0" />
-                    <p className="text-sm font-medium">{l.name}</p>
-                  </div>
-                </td>
-                <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
-                <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
-                <td className="px-6 py-3.5 text-xs font-mono text-zinc-600">{l.camp}</td>
-                <td className="px-6 py-3.5">
-                  <QuickStageChip lead={l} companyKey={companyKey} />
-                </td>
-                <td className="px-6 py-3.5 text-right">
-                  <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {["All", "Hot", "Warm", "Cold", "Interested", "No Answer"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`text-[11px] font-semibold px-3 py-1.5 shadow-sm ${filter === f ? "bg-zinc-900 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-zinc-50"}`}
+          >
+            {f === "Hot" ? "🔥 " : f === "Warm" ? "☀️ " : f === "Cold" ? "❄️ " : ""}{f}
+          </button>
+        ))}
+        <span className="text-[10px] text-zinc-500 ml-2">{leads.length} contacts</span>
       </div>
-    </Panel>
+
+      <Panel title="Contacts & Accounts" subtitle="Call · WhatsApp · Email in one click">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                <th className="px-6 py-3">Contact</th>
+                <th className="px-6 py-3">Email</th>
+                <th className="px-6 py-3">Phone</th>
+                <th className="px-6 py-3">Stage</th>
+                <th className="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200">
+              {leads.map((l: any) => (
+                <tr key={l.name} className="hover:bg-zinc-50/60">
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <img src={`https://i.pravatar.cc/80?u=${encodeURIComponent(l.name)}`} alt={l.name} className="size-9 rounded-full object-cover ring-1 ring-zinc-200 shrink-0" />
+                      <p className="text-sm font-medium">{l.name}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-700">{l.email}</td>
+                  <td className="px-6 py-3.5 text-xs text-zinc-700">{l.phone}</td>
+                  <td className="px-6 py-3.5">
+                    <QuickStageChip lead={l} companyKey={companyKey} />
+                  </td>
+                  <td className="px-6 py-3.5 text-right">
+                    <div className="inline-flex items-center gap-1 relative">
+                      <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
+                      {/* WhatsApp with template picker */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setTemplateOpen(templateOpen === l.name ? null : l.name)}
+                          title={`WhatsApp ${l.name}`}
+                          className="inline-flex size-8 items-center justify-center bg-[#25D366] text-white hover:bg-[#1da851] shadow-sm"
+                        >
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.116.553 4.104 1.515 5.834L0 24l6.335-1.66A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75c-1.97 0-3.837-.53-5.445-1.452l-.39-.232-3.758.985.994-3.648-.254-.403A9.71 9.71 0 012.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75z"/></svg>
+                        </button>
+                        {templateOpen === l.name && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setTemplateOpen(null)} />
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white shadow-lg ring-1 ring-zinc-200 z-20 p-2 space-y-1">
+                              {WHATSAPP_TEMPLATES.map((t) => (
+                                <button key={t.id} onClick={() => sendWhatsApp(l.phone, l.name, t.id)} className="w-full text-left text-[11px] font-medium px-2.5 py-2 hover:bg-zinc-50 text-zinc-700">
+                                  {t.label}
+                                </button>
+                              ))}
+                              <a href={`https://wa.me/${(l.phone || "").replace(/[^\d+]/g, "")}`} target="_blank" rel="noopener noreferrer" className="block text-[11px] font-medium px-2.5 py-2 hover:bg-zinc-50 text-emerald-600 border-t border-zinc-100 mt-1 pt-2">
+                                Open blank chat →
+                              </a>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <a href={`mailto:${l.email}`} title={`Email ${l.name}`} className="inline-flex size-8 items-center justify-center bg-[#4285F4] text-white hover:bg-[#3367d6] shadow-sm">
+                        <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="0"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {leads.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-xs text-zinc-500 italic">No contacts match this filter.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
   );
 }
 
