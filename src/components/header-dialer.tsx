@@ -449,21 +449,22 @@ export function HeaderDialer({
               {/* OAuth Token — REQUIRED for real calling */}
               <div className={dialerMode === "real" ? "p-3 bg-amber-50 ring-2 ring-amber-300 rounded-lg" : ""}>
                 <label className="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
-                  FreJun OAuth Access Token
+                  FreJun OAuth App Setup
                   {dialerMode === "real" && <span className="text-[#EA4335] font-bold">*</span>}
                 </label>
                 <p className="text-[10px] text-zinc-500 mt-1 mb-1.5">
-                  Required for real VoIP calls (mic/speaker). Get this from{" "}
+                  <strong>Step 1:</strong> Register your OAuth app at{" "}
                   <a href="https://product.frejun.com/settings" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                    FreJun → Settings → Developer → Generate Access Token
-                  </a>.
+                    FreJun → Settings → Developer → Create App
+                  </a>.<br/>
+                  <strong>Step 2:</strong> Copy your <strong>Access Token</strong> and paste below.
                 </p>
                 <div className="flex items-center gap-1.5">
                   <input
                     type={showOAuth ? "text" : "password"}
                     value={editOAuthToken}
                     onChange={(e) => setEditOAuthToken(e.target.value)}
-                    placeholder="ya29.A0ARrdaM..." 
+                    placeholder="Access Token from FreJun App" 
                     className={`flex-1 h-9 px-3 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 ${
                       dialerMode === "real" && !editOAuthToken
                         ? "border-[#EA4335] focus:ring-[#EA4335]/20 bg-red-50"
@@ -484,7 +485,9 @@ export function HeaderDialer({
                   </p>
                 )}
                 {dialerMode === "real" && !editOAuthToken && (
-                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">⚠️ Real calls won't work without this token.</p>
+                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">
+                    ⚠️ Access Token required. Create OAuth App at FreJun first!
+                  </p>
                 )}
               </div>
 
