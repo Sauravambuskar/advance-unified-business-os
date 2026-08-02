@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Phone, PhoneCall, Delete, X, UserPlus, Users as UsersIcon } from "lucide-react";
+import { Phone, PhoneCall, Delete, X, UserPlus, Users as UsersIcon, Settings, Eye, EyeOff } from "lucide-react";
 import { CallDialog } from "@/components/call-dialog";
 import { useAppStore, type CallDisposition } from "@/lib/app-store";
+import { getFrejunApiKey, getFrejunUserEmail, setFrejunApiKey, setFrejunUserEmail } from "@/lib/frejun";
 import { toast } from "sonner";
 
 type SaveKind = "Lead" | "Customer";
@@ -15,20 +16,40 @@ type SaveKind = "Lead" | "Customer";
 export function HeaderDialer({
   companyKey,
   companyName,
+  userEmail,
+  onUpdateEmail,
+  dialerMode = "simulated",
+  onToggleMode,
 }: {
   companyKey: string;
   companyName: string;
+  userEmail?: string;
+  onUpdateEmail?: (email: string) => void;
+  dialerMode?: "simulated" | "real";
+  onToggleMode?: () => void;
 }) {
   const store = useAppStore();
   const [padOpen, setPadOpen] = useState(false);
   const [number, setNumber] = useState("");
   const [callOpen, setCallOpen] = useState(false);
   const [savePromptOpen, setSavePromptOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editEmail, setEditEmail] = useState(userEmail || "");
+  const [editApiKey, setEditApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [pendingNumber, setPendingNumber] = useState("");
   const [saveKind, setSaveKind] = useState<SaveKind>("Lead");
   const [saveName, setSaveName] = useState("");
   const [saveNote, setSaveNote] = useState("");
   const [lastDisposition, setLastDisposition] = useState("");
+
+  const openSettings = () => {
+    // Seed fields from localStorage/env at open time
+    setEditEmail(userEmail || getFrejunUserEmail());
+    setEditApiKey(getFrejunApiKey());
+    setShowApiKey(false);
+    setSettingsOpen(true);
+  };
 
   const displayName = () =>
     number.trim() ? `Unknown · ${number.trim()}` : "Unknown";
@@ -233,6 +254,8 @@ export function HeaderDialer({
         phone={pendingNumber || number || "+91 00000 00000"}
         company={companyName}
         onDisposition={handleDisposition}
+        mode={dialerMode}
+        userEmail={userEmail}
       />
 
       {/* Save-as prompt after hangup */}
@@ -315,20 +338,186 @@ export function HeaderDialer({
           </div>
         </div>
       )}
+
+      {/* Settings dialog for email and mode */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-3 bg-zinc-950/60 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={() => setSettingsOpen(false)} aria-hidden />
+          <div className="relative w-full max-w-md bg-white shadow-2xl ring-1 ring-black/10 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200">
+              <div className="flex items-center gap-2">
+                <Settings className="size-4 text-zinc-700" />
+                <span className="text-sm font-semibold">FreJun Dialer Settings</span>
+              </div>
+              <button onClick={() => setSettingsOpen(false)} className="size-7 grid place-items-center rounded-md hover:bg-zinc-100 text-zinc-600">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4 max-h-[85vh] overflow-y-auto">
+
+              {/* Calling Mode */}
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider">Calling Mode</label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button onClick={onToggleMode}
+                    className={`h-10 rounded-md text-sm font-semibold ${dialerMode === "simulated" ? "bg-zinc-900 text-white" : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-zinc-50"}`}>
+                    🎭 Simulated
+                  </button>
+                  <button onClick={onToggleMode}
+                    className={`h-10 rounded-md text-sm font-semibold ${dialerMode === "real" ? "bg-[#34A853] text-white" : "bg-white ring-1 ring-zinc-200 text-zinc-700 hover:bg-zinc-50"}`}>
+                    📞 Real (FreJun)
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-1.5">
+                  {dialerMode === "real"
+                    ? "FreJun calls you first, then bridges to the lead's number."
+                    : "Demo mode — simulated audio and transcript. No real calls made."}
+                </p>
+              </div>
+
+              <div className="border-t border-zinc-100" />
+
+              {/* FreJun Email */}
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
+                  FreJun Account Email
+                  {dialerMode === "real" && <span className="text-[#EA4335] font-bold">*</span>}
+                </label>
+                <p className="text-[10px] text-zinc-500 mt-1 mb-1.5">
+                  Exact email you use at{" "}
+                  <a href="https://product.frejun.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                    product.frejun.com
+                  </a>. FreJun calls this user's phone first.
+                </p>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="yourname@company.com"
+                  className={`w-full h-9 px-3 rounded-md border text-sm focus:outline-none focus:ring-2 ${
+                    dialerMode === "real" && !editEmail
+                      ? "border-[#EA4335] focus:ring-[#EA4335]/20 bg-red-50"
+                      : "border-zinc-200 focus:ring-zinc-900/10"
+                  }`}
+                />
+                {dialerMode === "real" && !editEmail && (
+                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">⚠️ Required — calls will fail without this.</p>
+                )}
+                {editEmail && <p className="text-[10px] text-[#34A853] mt-1">✓ {editEmail}</p>}
+              </div>
+
+              {/* API Key */}
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
+                  FreJun API Key
+                  {dialerMode === "real" && <span className="text-[#EA4335] font-bold">*</span>}
+                </label>
+                <p className="text-[10px] text-zinc-500 mt-1 mb-1.5">
+                  From{" "}
+                  <a href="https://product.frejun.com/settings" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                    FreJun → Settings → Developer → API Key
+                  </a>.
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={editApiKey}
+                    onChange={(e) => setEditApiKey(e.target.value)}
+                    placeholder="xxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    className={`flex-1 h-9 px-3 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 ${
+                      dialerMode === "real" && !editApiKey
+                        ? "border-[#EA4335] focus:ring-[#EA4335]/20 bg-red-50"
+                        : "border-zinc-200 focus:ring-zinc-900/10"
+                    }`}
+                  />
+                  <button
+                    onClick={() => setShowApiKey(k => !k)}
+                    className="size-9 grid place-items-center rounded-md border border-zinc-200 hover:bg-zinc-50 text-zinc-500 shrink-0"
+                    title={showApiKey ? "Hide key" : "Show key"}
+                  >
+                    {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                {editApiKey && (
+                  <p className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+                    {showApiKey ? editApiKey : `${editApiKey.slice(0, 8)}${"•".repeat(Math.max(0, editApiKey.length - 8))}`}
+                  </p>
+                )}
+                {dialerMode === "real" && !editApiKey && (
+                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">⚠️ Required for real calls.</p>
+                )}
+              </div>
+
+              {/* How it works — only in real mode */}
+              {dialerMode === "real" && (
+                <div className="p-3 bg-blue-50 ring-1 ring-blue-200 rounded-md">
+                  <p className="text-[11px] font-semibold text-blue-900 mb-1">How network calling works:</p>
+                  <ol className="text-[10px] text-blue-800 space-y-0.5 list-decimal list-inside">
+                    <li>Click Call on any lead</li>
+                    <li>FreJun calls <strong>your phone</strong> first</li>
+                    <li>Answer → FreJun bridges to the lead</li>
+                    <li>Both parties connected</li>
+                  </ol>
+                  <p className="text-[10px] text-blue-700 mt-1.5 pt-1 border-t border-blue-200">
+                    Also set your phone in FreJun → Settings → Calling & SMS → "Connected to".
+                  </p>
+                </div>
+              )}
+
+              {/* Save */}
+              <button
+                onClick={() => {
+                  const email = editEmail.trim();
+                  const apiKey = editApiKey.trim();
+                  // Persist to localStorage via frejun service
+                  if (apiKey) setFrejunApiKey(apiKey);
+                  if (email) {
+                    setFrejunUserEmail(email);
+                    if (onUpdateEmail) onUpdateEmail(email);
+                  }
+                  const saved = [];
+                  if (email) saved.push(`Email: ${email}`);
+                  if (apiKey) saved.push(`Key: ${apiKey.slice(0, 8)}…`);
+                  if (saved.length) {
+                    toast.success("FreJun settings saved", { description: saved.join(" · ") });
+                  }
+                  setSettingsOpen(false);
+                }}
+                className="w-full h-10 rounded-md bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 
   return (
     <>
-      <button
-        onClick={() => setPadOpen(true)}
-        title="Open dialer"
-        aria-label="Open dialer"
-        className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#34A853] text-white text-sm font-medium hover:bg-[#2c8f46] transition-colors shrink-0"
-      >
-        <PhoneCall className="size-4" />
-        <span className="hidden md:inline">Dialer</span>
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={openSettings}
+          title="Dialer settings"
+          aria-label="Dialer settings"
+          className="inline-flex items-center justify-center size-9 rounded-lg bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors shrink-0"
+        >
+          <Settings className="size-4" />
+        </button>
+        <button
+          onClick={() => setPadOpen(true)}
+          title="Open dialer"
+          aria-label="Open dialer"
+          className="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-lg bg-[#34A853] text-white text-sm font-medium hover:bg-[#2c8f46] transition-colors shrink-0"
+        >
+          <PhoneCall className="size-4" />
+          <span className="hidden md:inline">Dialer</span>
+          {dialerMode === "real" && (
+            <span className="ml-0.5 px-1 py-0.5 text-[8px] font-bold bg-white/20 rounded">LIVE</span>
+          )}
+        </button>
+      </div>
 
       {/* Portal modals to document.body to escape header's backdrop-filter containing block */}
       {typeof document !== "undefined" && createPortal(modals, document.body)}

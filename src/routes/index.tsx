@@ -469,6 +469,11 @@ function Dashboard() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [addLeadOpen, setAddLeadOpen] = useState(false);
   const [leadDraft, setLeadDraft] = useState({ name: "", email: "", phone: "", message: "", source: "Website", stage: "New" });
+  
+  // Dialer settings: email and mode (simulated vs real)
+  const [userEmail, setUserEmail] = useState("");
+  const [dialerMode, setDialerMode] = useState<"simulated" | "real">("simulated");
+  
   const store = useAppStore();
   const baseCompany = companies[companyKey];
 
@@ -731,7 +736,14 @@ function Dashboard() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <HeaderDialer companyKey={companyKey} companyName={baseCompany.name} />
+            <HeaderDialer 
+              companyKey={companyKey} 
+              companyName={baseCompany.name} 
+              userEmail={userEmail}
+              onUpdateEmail={setUserEmail}
+              dialerMode={dialerMode}
+              onToggleMode={() => setDialerMode(m => m === "simulated" ? "real" : "simulated")}
+            />
             <AskAi snapshot={snapshot} />
             <button className="hidden lg:flex items-center gap-1.5 text-sm text-zinc-600 font-medium px-3 py-2 rounded-lg hover:bg-zinc-50">
               English <ChevronDown className="size-3.5" />
@@ -804,7 +816,7 @@ function Dashboard() {
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             {activeView !== "Executive Dashboard" && (
-              <ModuleView view={activeView} company={company} companyKey={companyKey} />
+              <ModuleView view={activeView} company={company} companyKey={companyKey} userEmail={userEmail} dialerMode={dialerMode} />
             )}
             {activeView === "Executive Dashboard" && (<>
 
@@ -960,7 +972,7 @@ function Dashboard() {
                             </td>
                             <td className="px-6 py-3.5 text-right">
                               <div className="inline-flex items-center gap-1">
-                                <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
+                                <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} userEmail={userEmail} dialerMode={dialerMode} />
                                 <a
                                   href={`https://wa.me/${(l.phone || "").replace(/[^\d+]/g, "")}`}
                                   target="_blank"
@@ -1374,7 +1386,7 @@ function NavItem({
 // Executive Dashboard is active. Every core / industry / system item
 // has a working destination so nothing in the nav is dead.
 // ------------------------------------------------------------------
-function ModuleView({ view, company, companyKey }: { view: string; company: any; companyKey: string }) {
+function ModuleView({ view, company, companyKey, userEmail, dialerMode }: { view: string; company: any; companyKey: string; userEmail?: string; dialerMode?: "simulated" | "real" }) {
   const store = useAppStore();
 
   const onExport = () => {
@@ -1453,7 +1465,7 @@ function ModuleView({ view, company, companyKey }: { view: string; company: any;
           </button>
         </div>
       </div>
-      {renderModuleBody(view, company, companyKey)}
+      {renderModuleBody(view, company, companyKey, userEmail, dialerMode)}
     </div>
   );
 }
@@ -1478,12 +1490,12 @@ function moduleBlurb(view: string) {
   return map[view] ?? "Business module scoped to the selected company";
 }
 
-function renderModuleBody(view: string, company: any, companyKey: string) {
+function renderModuleBody(view: string, company: any, companyKey: string, userEmail?: string, dialerMode?: "simulated" | "real") {
   switch (view) {
     case "CRM":
-      return <CRMView company={company} companyKey={companyKey} />;
+      return <CRMView company={company} companyKey={companyKey} userEmail={userEmail} dialerMode={dialerMode} />;
     case "Lead Management":
-      return <LeadsView company={company} companyKey={companyKey} />;
+      return <LeadsView company={company} companyKey={companyKey} userEmail={userEmail} dialerMode={dialerMode} />;
     case "Sales Pipeline":
       return <PipelineView company={company} companyKey={companyKey} />;
     case "Quotations":
@@ -1518,7 +1530,7 @@ function renderModuleBody(view: string, company: any, companyKey: string) {
 // stage cycle. The intent is to update leads without opening the detail panel.
 function leadKeyOf(l: any) { return `${l.name}::${l.camp ?? ""}`; }
 
-function QuickCallButton({ lead, companyKey, companyName }: { lead: any; companyKey: string; companyName: string }) {
+function QuickCallButton({ lead, companyKey, companyName, userEmail, dialerMode }: { lead: any; companyKey: string; companyName: string; userEmail?: string; dialerMode?: "simulated" | "real" }) {
   const store = useAppStore();
   const [open, setOpen] = useState(false);
   const key = leadKeyOf(lead);
@@ -1623,6 +1635,8 @@ function QuickCallButton({ lead, companyKey, companyName }: { lead: any; company
         company={companyName}
         photo={lead.photo || lead.avatar || `https://i.pravatar.cc/240?u=${encodeURIComponent(lead.name)}`}
         onDisposition={handleDisposition}
+        mode={dialerMode}
+        userEmail={userEmail}
       />
     </>
   );
@@ -1676,7 +1690,7 @@ function Panel({ title, subtitle, children }: any) {
   );
 }
 
-function CRMView({ company, companyKey }: any) {
+function CRMView({ company, companyKey, userEmail, dialerMode }: any) {
   const store = useAppStore();
   const [filter, setFilter] = useState("All");
   const [templateOpen, setTemplateOpen] = useState<string | null>(null);
@@ -1748,7 +1762,7 @@ function CRMView({ company, companyKey }: any) {
                   </td>
                   <td className="px-6 py-3.5 text-right">
                     <div className="inline-flex items-center gap-1 relative">
-                      <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} />
+                      <QuickCallButton lead={l} companyKey={companyKey} companyName={company.name} userEmail={userEmail} dialerMode={dialerMode} />
                       {/* WhatsApp with template picker */}
                       <div className="relative">
                         <button
@@ -2271,7 +2285,7 @@ function CallHistoryPanel({ leadName, leadCompany }: { leadName: string; leadCom
   );
 }
 
-function LeadsView({ company, companyKey }: any) {
+function LeadsView({ company, companyKey, userEmail, dialerMode }: any) {
   const [leads, setLeads] = useState<FullLead[]>(() => seedLeads(company));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -2342,7 +2356,7 @@ function LeadsView({ company, companyKey }: any) {
                   </td>
                   <td className="px-6 py-3.5 text-right">
                     <div className="inline-flex items-center gap-1.5">
-                      <QuickCallButton lead={rowLead} companyKey={companyKey} companyName={company.name} />
+                      <QuickCallButton lead={rowLead} companyKey={companyKey} companyName={company.name} userEmail={userEmail} dialerMode={dialerMode} />
                       <button
                         onClick={() => setSelectedId(l.id)}
                         className="inline-flex h-8 items-center px-2 rounded-md text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
