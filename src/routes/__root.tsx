@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { FrejunDialerWidget, FrejunWidgetContext, type FrejunWidgetRef } from "@/components/frejun-widget";
 
 function NotFoundComponent() {
   return (
@@ -128,10 +130,28 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const widgetRef = useRef<FrejunWidgetRef | null>(null);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      {/* FreJun Dialer Widget — hidden iframe, stays mounted for entire session */}
+      <FrejunWidgetContext.Provider value={widgetRef}>
+        <FrejunDialerWidget
+          ref={widgetRef}
+          onCallEnded={() => {
+            // Dispatch a custom DOM event so CallDialog can react
+            window.dispatchEvent(new CustomEvent("frejun:call-ended"));
+          }}
+          onIncomingCall={() => {
+            window.dispatchEvent(new CustomEvent("frejun:incoming-call"));
+          }}
+          onUnauthorized={(detail) => {
+            console.warn("FreJun unauthorized:", detail);
+          }}
+        />
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </FrejunWidgetContext.Provider>
     </QueryClientProvider>
   );
 }

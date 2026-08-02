@@ -93,6 +93,16 @@ export function setFrejunApiKey(key: string): void {
   try { localStorage.setItem(LS_KEY_APIKEY, key.trim()); } catch {}
 }
 
+/** Read the OAuth access token (localStorage) */
+export function getFrejunOAuthToken(): string {
+  try { return localStorage.getItem("frejun_oauth_token") || ""; } catch { return ""; }
+}
+
+/** Persist OAuth token to localStorage */
+export function setFrejunOAuthToken(token: string): void {
+  try { localStorage.setItem("frejun_oauth_token", token.trim()); } catch {}
+}
+
 /** Read the active user email (localStorage overrides .env) */
 export function getFrejunUserEmail(): string {
   try {

@@ -1,23 +1,39 @@
+/**
+ * CallDialog
+ *
+ * Two modes:
+ *  - "simulated": Web Audio API tones + scripted transcript (demo/offline)
+ *  - "real":      FreJun Dialer Widget iframe (real VoIP, real mic/speaker)
+ *
+ * Real mode lifecycle:
+ *  1. Widget (mounted globally in __root.tsx) receives initiate-call message
+ *  2. FreJun places the VoIP call — browser mic/speaker become active
+ *  3. Widget fires "call-ended" message when EITHER party hangs up
+ *  4. We receive that via the onCallEnded prop → call hangup() immediately
+ *  5. User sees disposition panel → logs outcome → dialog closes
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   PhoneOff, Mic, MicOff, Volume2, VolumeX,
   Pause, Play, Video, MessageSquare, Sparkles, X, User,
 } from "lucide-react";
-import { initiateCall, formatPhoneE164, updateCallLog, type FrejunCallResponse } from "@/lib/frejun";
+import { updateCallLog } from "@/lib/frejun";
+import { useFreJunWidget } from "@/components/frejun-widget";
 import { toast } from "sonner";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type Line = { who: "agent" | "lead"; text: string; at: number };
 
 const SCRIPT: Line[] = [
   { who: "agent", text: "Hello, this is calling from Advance Group. Am I speaking with {name}?", at: 1200 },
   { who: "lead",  text: "Yes, speaking. How can I help?", at: 3000 },
   { who: "agent", text: "I'm following up on the proposal we shared last week — do you have a couple of minutes?", at: 5000 },
-  { who: "lead",  text: "Sure, I did review it. The pricing looks reasonable but I have a few questions on the timelines.", at: 8500 },
-  { who: "agent", text: "Absolutely — we can typically kick off within 2 weeks of a signed SOW. Which milestone concerns you most?", at: 12500 },
+  { who: "lead",  text: "Sure, I did review it. Pricing looks reasonable but I have questions on the timelines.", at: 8500 },
+  { who: "agent", text: "Absolutely — we can kick off within 2 weeks of a signed SOW. Which milestone concerns you most?", at: 12500 },
   { who: "lead",  text: "The go-live date. We need this operational before the next quarter.", at: 16500 },
-  { who: "agent", text: "Noted. I'll align the delivery team and share a phased rollout plan by tomorrow.", at: 20000 },
+  { who: "agent", text: "Noted. I'll share a phased rollout plan by tomorrow.", at: 20000 },
   { who: "lead",  text: "Great, please also loop in your finance contact for the PO format.", at: 24000 },
 ];
 
@@ -26,27 +42,21 @@ const SENTIMENT = {
   negative:  ["concern", "issue", "problem", "delay", "expensive", "no"],
 };
 
-function fmt(sec: number) {
-  const m = Math.floor(sec / 60).toString().padStart(2, "0");
-  const s = Math.floor(sec % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+function fmt(s: number) {
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-// ─── Audio Engine (module-level globals) ─────────────────────────────────────
-// Using module globals avoids React closure staleness issues.
-// Every function reads/writes the same variables so there is no
-// "stale captured value" problem.
-
+// ─── Simulated audio (module globals — no React closure issues) ───────────────
 let gCtx: AudioContext | null = null;
 let gMaster: GainNode | null = null;
 let gRingOsc1: OscillatorNode | null = null;
 let gRingOsc2: OscillatorNode | null = null;
 let gRingGain: GainNode | null = null;
-let gRingActive = false; // the single kill-switch for the ring tick loop
+let gRingActive = false;
 let gTalkOsc: OscillatorNode | null = null;
 let gTalkGain: GainNode | null = null;
 
-function ensureCtx(): AudioContext {
+function ensureCtx() {
   if (!gCtx || gCtx.state === "closed") {
     gCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     gMaster = gCtx.createGain();
@@ -58,24 +68,14 @@ function ensureCtx(): AudioContext {
 }
 
 function audioStartRing() {
-  audioStopRing(); // clean slate
+  audioStopRing();
   const ctx = ensureCtx();
-  const master = gMaster!;
-
-  const o1 = ctx.createOscillator();
-  const o2 = ctx.createOscillator();
-  o1.type = "sine"; o1.frequency.value = 425;
-  o2.type = "sine"; o2.frequency.value = 400;
-
-  const g = ctx.createGain();
-  g.gain.value = 0;
-  o1.connect(g); o2.connect(g); g.connect(master);
+  const o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = 425;
+  const o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 400;
+  const g = ctx.createGain(); g.gain.value = 0;
+  o1.connect(g); o2.connect(g); g.connect(gMaster!);
   o1.start(); o2.start();
-
-  gRingOsc1 = o1; gRingOsc2 = o2; gRingGain = g;
-  gRingActive = true;
-
-  // Beep pattern: 1s ON, 2s OFF — each iteration re-checks gRingActive
+  gRingOsc1 = o1; gRingOsc2 = o2; gRingGain = g; gRingActive = true;
   const beep = () => {
     if (!gRingActive || !gRingGain) return;
     gRingGain.gain.value = 0.3;
@@ -89,41 +89,30 @@ function audioStartRing() {
 }
 
 function audioStopRing() {
-  // Kill the tick loop FIRST, then stop oscillators
   gRingActive = false;
   if (gRingGain) { try { gRingGain.gain.value = 0; } catch {} }
-  try { gRingOsc1?.stop(); } catch {}
-  try { gRingOsc2?.stop(); } catch {}
+  try { gRingOsc1?.stop(); } catch {}; try { gRingOsc2?.stop(); } catch {};
   gRingOsc1 = null; gRingOsc2 = null; gRingGain = null;
 }
 
 function audioStartTalk() {
   audioStopTalk();
   const ctx = ensureCtx();
-  const master = gMaster!;
-
-  const osc = ctx.createOscillator();
-  osc.type = "sawtooth"; osc.frequency.value = 170;
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass"; filter.frequency.value = 900; filter.Q.value = 1.5;
-  const gain = ctx.createGain();
-  gain.gain.value = 0;
-
-  osc.connect(filter); filter.connect(gain); gain.connect(master);
-  osc.start();
+  const osc = ctx.createOscillator(); osc.type = "sawtooth"; osc.frequency.value = 170;
+  const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = 900;
+  const gain = ctx.createGain(); gain.gain.value = 0;
+  osc.connect(filter); filter.connect(gain); gain.connect(gMaster!); osc.start();
   gTalkOsc = osc; gTalkGain = gain;
 }
 
 function audioStopTalk() {
   if (gTalkGain) { try { gTalkGain.gain.value = 0; } catch {} }
-  try { gTalkOsc?.stop(); } catch {}
-  gTalkOsc = null; gTalkGain = null;
+  try { gTalkOsc?.stop(); } catch {}; gTalkOsc = null; gTalkGain = null;
 }
 
-function audioSpeak(durationMs = 1500) {
+function audioSpeak(ms = 1500) {
   if (!gTalkGain || !gCtx) return;
-  const now = gCtx.currentTime;
-  const dur = durationMs / 1000;
+  const now = gCtx.currentTime; const dur = ms / 1000;
   gTalkGain.gain.cancelScheduledValues(now);
   gTalkGain.gain.setValueAtTime(0, now);
   gTalkGain.gain.linearRampToValueAtTime(0.12, now + 0.05);
@@ -131,18 +120,13 @@ function audioSpeak(durationMs = 1500) {
   gTalkGain.gain.linearRampToValueAtTime(0, now + dur);
 }
 
-function audioSetSpeaker(on: boolean) {
-  if (gMaster) gMaster.gain.value = on ? 1 : 0;
-}
+function audioSetSpeaker(on: boolean) { if (gMaster) gMaster.gain.value = on ? 1 : 0; }
 
-/** Kill ALL audio and close the AudioContext. Safe to call multiple times. */
 function audioKillAll() {
-  gRingActive = false; // stop the ring tick loop immediately
-  audioStopRing();
-  audioStopTalk();
+  gRingActive = false;
+  audioStopRing(); audioStopTalk();
   if (gMaster) { try { gMaster.gain.value = 0; } catch {} }
-  const ctx = gCtx;
-  gCtx = null; gMaster = null;
+  const ctx = gCtx; gCtx = null; gMaster = null;
   setTimeout(() => { try { ctx?.close(); } catch {} }, 80);
 }
 
@@ -165,173 +149,157 @@ export function CallDialog({
   mode?: "simulated" | "real";
   userEmail?: string;
 }) {
-  // ── call-scoped state ───────────────────────────────────────────────────
-  const [phase, setPhase]          = useState<"dialing" | "connected" | "ended">("dialing");
-  const [seconds, setSeconds]      = useState(0);
-  const [muted, setMuted]          = useState(false);
-  const [speakerOn, setSpeakerOn]  = useState(true);
-  const [held, setHeld]            = useState(false);
-  const [transcript, setTrans]     = useState<Line[]>([]);
-  const [callErr, setCallErr]      = useState<string | null>(null);
-  const [realId, setRealId]        = useState<number | null>(null);
+  const widget = useFreJunWidget();
 
-  // ── disposition state (separate lifecycle from the call itself) ─────────
-  const [showDisp, setShowDisp]    = useState(false);
-  const [disp, setDisp]            = useState("");
-  const [note, setNote]            = useState("");
-  const [temp, setTemp]            = useState("");
-  const [cbTime, setCbTime]        = useState<number | null>(null);
-  const [cbDate, setCbDate]        = useState("");
-  const [cbStr, setCbStr]          = useState("");
+  // ── call state ──────────────────────────────────────────────────────────
+  const [phase, setPhase]       = useState<"dialing" | "connected" | "ended">("dialing");
+  const [seconds, setSeconds]   = useState(0);
+  const [muted, setMuted]       = useState(false);
+  const [speakerOn, setSpeaker] = useState(true);
+  const [held, setHeld]         = useState(false);
+  const [transcript, setTrans]  = useState<Line[]>([]);
+  const [callErr, setCallErr]   = useState<string | null>(null);
+  const [realId, setRealId]     = useState<number | null>(null);
+
+  // ── disposition state ───────────────────────────────────────────────────
+  const [showDisp, setShowDisp] = useState(false);
+  const [disp, setDisp]         = useState("");
+  const [note, setNote]         = useState("");
+  const [temp, setTemp]         = useState("");
+  const [cbTime, setCbTime]     = useState<number | null>(null);
+  const [cbDate, setCbDate]     = useState("");
+  const [cbStr, setCbStr]       = useState("");
 
   // ── refs ────────────────────────────────────────────────────────────────
-  const scrollRef   = useRef<HTMLDivElement>(null);
-  const prevLen     = useRef(0);
-  // callEpoch: incremented every time a new call starts.
-  // Every async callback checks its captured epoch against current; if
-  // they differ the call was reset, so the callback does nothing.
-  const epochRef    = useRef(0);
-  // timers: all setTimeout/Interval IDs for the CURRENT call
-  const timersRef   = useRef<number[]>([]);
+  const scrollRef    = useRef<HTMLDivElement>(null);
+  const prevLen      = useRef(0);
+  const epochRef     = useRef(0);  // incremented each call; guards stale async
+  const timersRef    = useRef<number[]>([]);
 
-  const clearCallTimers = () => {
+  const clearTimers = () => {
     timersRef.current.forEach(t => { window.clearTimeout(t); window.clearInterval(t); });
     timersRef.current = [];
   };
 
+  // ── listen for FreJun "call-ended" event (fired by __root.tsx) ──────────
+  useEffect(() => {
+    if (!open || mode !== "real") return;
+    const handler = () => {
+      // Lead or FreJun ended the call — trigger our hangup flow
+      if (phase !== "ended") {
+        epochRef.current += 1;
+        clearTimers();
+        audioKillAll();
+        setPhase("ended");
+        if (onDisposition) {
+          window.setTimeout(() => setShowDisp(true), 600);
+        } else {
+          window.setTimeout(() => onClose(), 800);
+        }
+      }
+    };
+    window.addEventListener("frejun:call-ended", handler);
+    return () => window.removeEventListener("frejun:call-ended", handler);
+  }, [open, mode, phase, onDisposition, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── speaker sync ────────────────────────────────────────────────────────
   useEffect(() => { audioSetSpeaker(speakerOn); }, [speakerOn]);
 
-  // ── main call lifecycle effect ──────────────────────────────────────────
+  // ── main lifecycle effect ────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
 
-    // ── NEW CALL: bump epoch so any lingering async from previous call dies
     const myEpoch = epochRef.current + 1;
     epochRef.current = myEpoch;
+    const alive = () => epochRef.current === myEpoch;
 
-    // ── reset all call state ──────────────────────────────────────────────
-    clearCallTimers();
-    audioKillAll(); // kill any leftover audio from previous call
-    setPhase("dialing");
-    setSeconds(0);
-    setTrans([]);
-    setMuted(false);
-    setSpeakerOn(true);
-    setHeld(false);
-    setCallErr(null);
-    setRealId(null);
-    setShowDisp(false);
-    setDisp(""); setNote(""); setTemp("");
+    clearTimers();
+    audioKillAll();
+
+    // Reset all state
+    setPhase("dialing"); setSeconds(0); setTrans([]); setMuted(false);
+    setSpeaker(true); setHeld(false); setCallErr(null); setRealId(null);
+    setShowDisp(false); setDisp(""); setNote(""); setTemp("");
     setCbTime(null); setCbDate(""); setCbStr("");
     prevLen.current = 0;
 
-    const isAlive = () => epochRef.current === myEpoch;
+    if (mode === "real") {
+      // ── REAL MODE via FreJun Dialer Widget ──────────────────────────────
+      if (!widget) {
+        setCallErr("FreJun widget not mounted. Please reload the page.");
+        toast.error("Widget not ready");
+        return;
+      }
+      const oauthToken = (window.localStorage.getItem("frejun_oauth_token") || "").trim();
+      if (!oauthToken) {
+        setCallErr("OAuth token required. Open ⚙ Dialer Settings → paste your FreJun access token.");
+        toast.error("FreJun token not set", {
+          description: "Open Dialer Settings (⚙) and paste your FreJun OAuth token.",
+          duration: 8000,
+        });
+        return;
+      }
+      toast.info("Initiating real call via FreJun…", { description: `Calling ${phone}` });
+      widget.initiateCall({
+        candidateNumber: phone,
+        candidateName: name,
+        transactionId: `call-${Date.now()}`,
+      });
+      // Widget will fire "call-ended" when either party hangs up.
+      // We mark as connected after 3s (widget handles the actual state).
+      timersRef.current.push(window.setTimeout(() => {
+        if (alive()) setPhase("connected");
+      }, 3000));
 
-    if (mode === "real" && userEmail?.includes("@")) {
-      // ── REAL MODE: call FreJun API ──────────────────────────────────────
-      (async () => {
-        try {
-          const e164 = formatPhoneE164(phone);
-          toast.info("Connecting via FreJun…", { description: `Dialling ${e164}` });
-
-          const res: FrejunCallResponse = await initiateCall(
-            e164, name,
-            { candidate_id: name.replace(/\s+/g, "-").toLowerCase(), transaction_id: `call-${Date.now()}` },
-            userEmail,
-          );
-
-          if (!isAlive()) return; // user hung up while API was in-flight
-
-          if (res.success && res.data) {
-            setRealId(res.data.call_id);
-            toast.success("FreJun is calling you", {
-              description: "Answer your phone — FreJun will connect you to the lead.",
-              duration: 8000,
-            });
-            timersRef.current.push(window.setTimeout(() => {
-              if (isAlive()) setPhase("connected");
-            }, 6000));
-          } else {
-            const errMsg = res.message || "Call failed";
-            setCallErr(errMsg);
-            toast.error("FreJun error", { description: errMsg, duration: 8000 });
-            if (isAlive()) setPhase("ended");
-          }
-        } catch (err) {
-          if (!isAlive()) return;
-          const msg = err instanceof Error ? err.message : String(err);
-          setCallErr(msg);
-          if (msg.includes("doesnt exist")) {
-            toast.error("FreJun: user not found", {
-              description: `"${userEmail}" is not registered in this FreJun account.`,
-              duration: 10000,
-            });
-          } else if (msg.includes("401") || msg.includes("403")) {
-            toast.error("FreJun: auth failed", {
-              description: "API key invalid — check FreJun → Settings → Developer.",
-              duration: 10000,
-            });
-          } else {
-            toast.error("FreJun error", { description: msg, duration: 8000 });
-          }
-          if (isAlive()) setPhase("ended");
-        }
-      })();
     } else {
       // ── SIMULATED MODE ──────────────────────────────────────────────────
-      // setTimeout(0) keeps audio creation in the same gesture tick
       timersRef.current.push(window.setTimeout(() => {
-        if (!isAlive()) return;
+        if (!alive()) return;
         audioStartRing();
       }, 0));
-
-      // Auto-connect after 4s
       timersRef.current.push(window.setTimeout(() => {
-        if (!isAlive()) return;
-        audioStopRing();
-        audioStartTalk();
-        setPhase("connected");
+        if (!alive()) return;
+        audioStopRing(); audioStartTalk(); setPhase("connected");
       }, 4000));
     }
 
-    // ── CLEANUP: runs when open→false OR component unmounts ───────────────
     return () => {
-      // Invalidate this call's epoch so async callbacks become no-ops
       epochRef.current = myEpoch + 1;
-      clearCallTimers();
+      clearTimers();
       audioKillAll();
+      // If real call — tell widget to end it too (e.g. navigating away)
+      if (mode === "real" && widget) {
+        widget.endCall();
+      }
     };
-  }, [open]); // intentionally only re-run when open changes — NOT on mode/userEmail/name/phone
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── call timer (increments while connected and not held) ────────────────
+  // ── call timer ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "connected") return;
-    const id = window.setInterval(() => {
-      if (!held) setSeconds(s => s + 1);
-    }, 1000);
+    const id = window.setInterval(() => { if (!held) setSeconds(s => s + 1); }, 1000);
     timersRef.current.push(id);
     return () => window.clearInterval(id);
   }, [phase, held]);
 
-  // ── simulated transcript playback ────────────────────────────────────────
+  // ── simulated transcript ────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "connected" || mode !== "simulated") return;
-    const epoch = epochRef.current;
+    const ep = epochRef.current;
     SCRIPT.forEach(line => {
       timersRef.current.push(window.setTimeout(() => {
-        if (epochRef.current !== epoch) return;
+        if (epochRef.current !== ep) return;
         setTrans(prev => [...prev, { ...line, text: line.text.replace("{name}", name.split(" ")[0]) }]);
       }, line.at));
     });
   }, [phase, name, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── auto-scroll transcript ───────────────────────────────────────────────
+  // ── scroll transcript ───────────────────────────────────────────────────
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [transcript]);
 
-  // ── speak sound on new lead lines ────────────────────────────────────────
+  // ── speak sound ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (transcript.length > prevLen.current) {
       transcript.slice(prevLen.current).forEach(l => {
@@ -344,19 +312,15 @@ export function CallDialog({
   if (!open) return null;
 
   // ── HANGUP ───────────────────────────────────────────────────────────────
-  // Invalidates the epoch so all pending async/timers become no-ops,
-  // then kills audio and shows the disposition panel.
   const hangup = () => {
-    if (phase === "ended") return; // already hung up
-
-    // Invalidate epoch — any pending setTimeout/async checks isAlive() and exits
+    if (phase === "ended") return;
     epochRef.current += 1;
-    clearCallTimers();
+    clearTimers();
     audioKillAll();
+    // Tell FreJun widget to end the real call
+    if (mode === "real" && widget) widget.endCall();
     setPhase("ended");
-
-    // Show disposition panel after a brief "Call Ended" flash
-    // Use a fresh setTimeout OUTSIDE timersRef so it isn't cleared by clearCallTimers
+    // Show disposition after brief flash — setTimeout outside timersRef
     if (onDisposition) {
       window.setTimeout(() => setShowDisp(true), 600);
     } else {
@@ -364,7 +328,7 @@ export function CallDialog({
     }
   };
 
-  // ── disposition helpers ──────────────────────────────────────────────────
+  // ── disposition ─────────────────────────────────────────────────────────
   const calcHrs = () => {
     if (cbDate) {
       const dt = new Date(cbStr ? `${cbDate}T${cbStr}` : `${cbDate}T10:00`);
@@ -378,18 +342,14 @@ export function CallDialog({
     const hrs = calcHrs();
     onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
     if (mode === "real" && realId !== null) {
-      updateCallLog(String(realId), {
-        notes: note || undefined, call_outcome: disp || "Follow Up",
-      }).catch(console.error);
+      updateCallLog(String(realId), { notes: note || undefined, call_outcome: disp || "Follow Up" }).catch(console.error);
     }
     setShowDisp(false); onClose();
   };
 
   const skipDisp = () => {
     const hrs = calcHrs();
-    if (disp || temp || hrs) {
-      onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
-    }
+    if (disp || temp || hrs) onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
     setShowDisp(false); onClose();
   };
 
@@ -408,7 +368,7 @@ export function CallDialog({
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-zinc-950/75 backdrop-blur-sm">
       <div className="relative w-full max-w-5xl h-[92vh] sm:h-[86vh] bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
 
-        {/* LEFT ─ call controls */}
+        {/* LEFT — call controls */}
         <div className="relative bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] text-white flex flex-col min-h-0">
 
           {/* top bar */}
@@ -418,20 +378,19 @@ export function CallDialog({
                 phase === "connected" ? "bg-[#34A853] animate-pulse" :
                 phase === "dialing"   ? "bg-[#FBBC05] animate-pulse" : "bg-[#EA4335]"
               }`} />
-              {phase === "dialing" ? "Ringing…" : phase === "connected" ? "Live Call" : "Call Ended"}
+              {phase === "dialing" ? "Dialling…" : phase === "connected" ? "Live Call" : "Call Ended"}
               {mode === "real" && phase !== "ended" && (
                 <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold bg-[#34A853] text-white rounded">LIVE</span>
               )}
             </div>
-            {/* X only after call ended */}
             {phase === "ended" && !showDisp && (
-              <button onClick={() => onClose()} className="size-8 grid place-items-center rounded-md hover:bg-white/10 text-white/70">
+              <button onClick={onClose} className="size-8 grid place-items-center rounded-md hover:bg-white/10 text-white/70">
                 <X className="size-4" />
               </button>
             )}
           </div>
 
-          {/* avatar + status */}
+          {/* avatar */}
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 gap-4 min-h-0">
             <div className="relative">
               {phase === "dialing" && (
@@ -451,10 +410,15 @@ export function CallDialog({
               <p className="text-sm text-white/50 mt-0.5 tracking-wide font-mono">{phone}</p>
               {mode === "real" && phase === "dialing" && (
                 <p className="text-xs text-[#FBBC05] mt-2 font-medium animate-pulse">
-                  📞 FreJun is calling you first — answer your phone!
+                  📞 Connecting via FreJun VoIP…
                 </p>
               )}
-              {callErr && <p className="text-xs text-[#EA4335] mt-2 max-w-xs">⚠️ {callErr}</p>}
+              {mode === "real" && phase === "connected" && (
+                <p className="text-xs text-[#34A853] mt-2 font-medium">
+                  🎙️ Your mic &amp; speaker are live
+                </p>
+              )}
+              {callErr && <p className="text-xs text-[#EA4335] mt-2 max-w-xs leading-snug">⚠️ {callErr}</p>}
             </div>
 
             <div className="text-4xl font-mono tabular-nums tracking-widest">
@@ -479,33 +443,33 @@ export function CallDialog({
             )}
           </div>
 
-          {/* control bar */}
+          {/* controls */}
           <div className="shrink-0 px-6 pb-6 pt-2 grid grid-cols-5 gap-3 bg-gradient-to-t from-[#0a1628] to-transparent">
-            <Ctrl icon={muted    ? MicOff  : Mic}     label={muted    ? "Unmute"  : "Mute"}    active={muted}     onClick={() => setMuted(m => !m)} />
-            <Ctrl icon={held     ? Play    : Pause}   label={held     ? "Resume"  : "Hold"}    active={held}      onClick={() => setHeld(h => !h)} />
-            <Ctrl icon={speakerOn ? Volume2 : VolumeX} label={speakerOn ? "Speaker" : "Muted"} active={!speakerOn} onClick={() => setSpeakerOn(s => !s)} />
-            <Ctrl icon={Video}                         label="Video"                            active={false}     onClick={() => {}} />
-            <button
-              onClick={hangup}
-              disabled={phase === "ended"}
-              className="flex flex-col items-center gap-1 rounded-md bg-[#EA4335] hover:bg-[#c5372c] active:scale-95 disabled:opacity-40 px-3 py-2.5 transition-all"
-            >
+            <Ctrl icon={muted     ? MicOff  : Mic}      label={muted     ? "Unmute" : "Mute"}     active={muted}      onClick={() => setMuted(m => !m)} />
+            <Ctrl icon={held      ? Play    : Pause}     label={held      ? "Resume" : "Hold"}     active={held}       onClick={() => setHeld(h => !h)} />
+            <Ctrl icon={speakerOn ? Volume2 : VolumeX}   label={speakerOn ? "Speaker": "Muted"}    active={!speakerOn} onClick={() => setSpeaker(s => !s)} />
+            <Ctrl icon={Video}                           label="Video"                             active={false}      onClick={() => {}} />
+            <button onClick={hangup} disabled={phase === "ended"}
+              className="flex flex-col items-center gap-1 rounded-md bg-[#EA4335] hover:bg-[#c5372c] active:scale-95 disabled:opacity-40 px-3 py-2.5 transition-all">
               <PhoneOff className="size-5" />
               <span className="text-[10px] font-semibold">End</span>
             </button>
           </div>
         </div>
 
-        {/* RIGHT ─ transcript + AI */}
+        {/* RIGHT — transcript + AI */}
         <div className="flex flex-col min-h-0 bg-zinc-50 border-l border-zinc-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-white shrink-0">
             <div className="flex items-center gap-2">
               <MessageSquare className="size-4 text-zinc-700" />
-              <span className="text-sm font-semibold">Live Transcription</span>
+              <span className="text-sm font-semibold">
+                {mode === "real" ? "Call Status" : "Live Transcription"}
+              </span>
               {phase === "ended"
                 ? <span className="px-1.5 py-0.5 text-[10px] font-medium bg-zinc-200 text-zinc-600">ENDED</span>
                 : <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#EA4335] text-white">
-                    <span className="size-1.5 rounded-full bg-white animate-pulse" /> REC
+                    <span className="size-1.5 rounded-full bg-white animate-pulse" />
+                    {mode === "real" ? "LIVE" : "REC"}
                   </span>
               }
             </div>
@@ -513,20 +477,45 @@ export function CallDialog({
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin min-h-0">
-            {phase === "dialing" && (
+            {/* Real mode info panel */}
+            {mode === "real" && (
+              <div className={`mt-4 p-4 rounded text-xs text-center ring-1 ${
+                phase === "dialing"   ? "bg-amber-50 ring-amber-200" :
+                phase === "connected" ? "bg-emerald-50 ring-emerald-200" :
+                                        "bg-zinc-100 ring-zinc-200"
+              }`}>
+                {phase === "dialing" && (
+                  <>
+                    <p className="font-semibold text-amber-800">Connecting…</p>
+                    <p className="mt-1 text-zinc-600">FreJun is placing your VoIP call. Your browser mic and speaker will activate once connected.</p>
+                  </>
+                )}
+                {phase === "connected" && (
+                  <>
+                    <p className="font-semibold text-emerald-800">🟢 Call Live — mic &amp; speaker active</p>
+                    <p className="mt-1 text-zinc-600">Speak normally. Click End to hang up. FreJun will also detect when the lead hangs up.</p>
+                  </>
+                )}
+                {phase === "ended" && (
+                  <>
+                    <p className="font-semibold text-zinc-700">Call Ended</p>
+                    <p className="mt-1 text-zinc-500">Log the outcome below.</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Simulated mode */}
+            {mode === "simulated" && phase === "dialing" && (
               <div className="flex flex-col items-center justify-center gap-3 text-zinc-500 text-xs mt-12">
                 <div className="flex gap-1.5">
                   {[0,150,300].map(d => <span key={d} className="size-2.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay:`${d}ms` }} />)}
                 </div>
-                <p>{mode === "real" ? "Waiting for FreJun to bridge…" : "Ringing…"}</p>
+                <p>Ringing…</p>
               </div>
             )}
-            {mode === "real" && phase === "connected" && transcript.length === 0 && (
-              <div className="mt-8 p-4 bg-amber-50 ring-1 ring-amber-200 text-xs text-center rounded">
-                <p className="font-semibold text-amber-800">Real Call Active</p>
-                <p className="mt-1 text-zinc-600">Live transcription unavailable in real mode.</p>
-              </div>
-            )}
+
+            {/* Transcript */}
             {transcript.map((line, i) => (
               <div key={i} className={`flex ${line.who === "agent" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] px-3 py-2 text-sm ${
@@ -572,7 +561,7 @@ export function CallDialog({
     </div>
   );
 
-  // ── disposition panel (rendered ON TOP of the call panel) ────────────────
+  // ── disposition panel ─────────────────────────────────────────────────────
   const dispPanel = showDisp ? (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
       <div className="relative w-full max-w-lg bg-white shadow-[0_25px_60px_rgba(0,0,0,0.18)] ring-1 ring-zinc-950/10 overflow-hidden">
@@ -585,10 +574,9 @@ export function CallDialog({
             <X className="size-4" />
           </button>
         </div>
-
         <div className="p-5 space-y-4 max-h-[78vh] overflow-y-auto">
 
-          {/* Lead temperature */}
+          {/* Temperature */}
           <div>
             <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Lead Quality</p>
             <div className="grid grid-cols-3 gap-2">
@@ -618,7 +606,7 @@ export function CallDialog({
             </div>
           </div>
 
-          {/* Schedule callback */}
+          {/* Callback */}
           <div>
             <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">📞 Schedule Callback</p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
@@ -632,8 +620,7 @@ export function CallDialog({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] text-zinc-500 font-medium">Date</label>
-                <input type="date" value={cbDate}
-                  min={new Date().toISOString().split("T")[0]}
+                <input type="date" value={cbDate} min={new Date().toISOString().split("T")[0]}
                   onChange={e => { setCbDate(e.target.value); setCbTime(null); }}
                   className="mt-1 w-full h-9 px-2 border border-zinc-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
               </div>
@@ -684,22 +671,14 @@ function Ctrl({ icon: Icon, label, active, onClick }: {
 }
 
 function aiSuggestions(t: Line[]): string[] {
-  if (t.length === 0) return [
-    "Greet the lead by name and confirm identity.",
-    "Reference the last touchpoint or proposal.",
-  ];
+  if (t.length === 0) return ["Greet the lead by name and confirm identity.", "Reference the last touchpoint."];
   const text = t.map(x => x.text).join(" ").toLowerCase();
   const out: string[] = [];
-  if (text.includes("pricing") || text.includes("expensive"))
-    out.push("Address pricing — highlight ROI and phased payment options.");
-  if (text.includes("timeline") || text.includes("go-live") || text.includes("quarter"))
-    out.push("Confirm timeline; offer a phased rollout plan.");
-  if (text.includes("po") || text.includes("finance"))
-    out.push("Loop in Finance and share the PO format template.");
-  if (text.includes("proposal"))
-    out.push("Offer to walk through the proposal section by section.");
-  if (out.length === 0)
-    out.push("Ask an open-ended discovery question about their current workflow.");
-  out.push("Set a clear next step and send a calendar invite before ending.");
+  if (text.includes("pricing") || text.includes("expensive")) out.push("Highlight ROI and phased payment options.");
+  if (text.includes("timeline") || text.includes("go-live")) out.push("Confirm timeline; offer a phased rollout plan.");
+  if (text.includes("po") || text.includes("finance")) out.push("Share the PO format and loop in Finance.");
+  if (text.includes("proposal")) out.push("Walk through the proposal section by section.");
+  if (out.length === 0) out.push("Ask an open-ended discovery question about their workflow.");
+  out.push("Set a clear next step and send a calendar invite.");
   return out.slice(0, 4);
 }
