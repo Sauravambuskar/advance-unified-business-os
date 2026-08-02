@@ -3,7 +3,10 @@ import { createPortal } from "react-dom";
 import { Phone, PhoneCall, Delete, X, UserPlus, Users as UsersIcon, Settings, Eye, EyeOff } from "lucide-react";
 import { CallDialog } from "@/components/call-dialog";
 import { useAppStore, type CallDisposition } from "@/lib/app-store";
-import { getFrejunApiKey, getFrejunUserEmail, setFrejunApiKey, setFrejunUserEmail } from "@/lib/frejun";
+import {
+  getFrejunApiKey, getFrejunUserEmail, setFrejunApiKey, setFrejunUserEmail,
+  getFrejunOAuthToken, setFrejunOAuthToken,
+} from "@/lib/frejun";
 import { toast } from "sonner";
 
 type SaveKind = "Lead" | "Customer";
@@ -36,7 +39,9 @@ export function HeaderDialer({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editEmail, setEditEmail] = useState(userEmail || "");
   const [editApiKey, setEditApiKey] = useState("");
+  const [editOAuthToken, setEditOAuthToken] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showOAuth, setShowOAuth] = useState(false);
   const [pendingNumber, setPendingNumber] = useState("");
   const [saveKind, setSaveKind] = useState<SaveKind>("Lead");
   const [saveName, setSaveName] = useState("");
@@ -44,10 +49,11 @@ export function HeaderDialer({
   const [lastDisposition, setLastDisposition] = useState("");
 
   const openSettings = () => {
-    // Seed fields from localStorage/env at open time
     setEditEmail(userEmail || getFrejunUserEmail());
     setEditApiKey(getFrejunApiKey());
+    setEditOAuthToken(getFrejunOAuthToken());
     setShowApiKey(false);
+    setShowOAuth(false);
     setSettingsOpen(true);
   };
 
@@ -410,13 +416,12 @@ export function HeaderDialer({
               <div>
                 <label className="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
                   FreJun API Key
-                  {dialerMode === "real" && <span className="text-[#EA4335] font-bold">*</span>}
                 </label>
                 <p className="text-[10px] text-zinc-500 mt-1 mb-1.5">
                   From{" "}
                   <a href="https://product.frejun.com/settings" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
                     FreJun → Settings → Developer → API Key
-                  </a>.
+                  </a>. Used for call logs API (optional).
                 </p>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -424,11 +429,7 @@ export function HeaderDialer({
                     value={editApiKey}
                     onChange={(e) => setEditApiKey(e.target.value)}
                     placeholder="xxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    className={`flex-1 h-9 px-3 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 ${
-                      dialerMode === "real" && !editApiKey
-                        ? "border-[#EA4335] focus:ring-[#EA4335]/20 bg-red-50"
-                        : "border-zinc-200 focus:ring-zinc-900/10"
-                    }`}
+                    className="flex-1 h-9 px-3 rounded-md border border-zinc-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
                   />
                   <button
                     onClick={() => setShowApiKey(k => !k)}
@@ -443,8 +444,47 @@ export function HeaderDialer({
                     {showApiKey ? editApiKey : `${editApiKey.slice(0, 8)}${"•".repeat(Math.max(0, editApiKey.length - 8))}`}
                   </p>
                 )}
-                {dialerMode === "real" && !editApiKey && (
-                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">⚠️ Required for real calls.</p>
+              </div>
+
+              {/* OAuth Token — REQUIRED for real calling */}
+              <div className={dialerMode === "real" ? "p-3 bg-amber-50 ring-2 ring-amber-300 rounded-lg" : ""}>
+                <label className="text-[11px] font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
+                  FreJun OAuth Access Token
+                  {dialerMode === "real" && <span className="text-[#EA4335] font-bold">*</span>}
+                </label>
+                <p className="text-[10px] text-zinc-500 mt-1 mb-1.5">
+                  Required for real VoIP calls (mic/speaker). Get this from{" "}
+                  <a href="https://product.frejun.com/settings" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                    FreJun → Settings → Developer → Generate Access Token
+                  </a>.
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type={showOAuth ? "text" : "password"}
+                    value={editOAuthToken}
+                    onChange={(e) => setEditOAuthToken(e.target.value)}
+                    placeholder="ya29.A0ARrdaM..." 
+                    className={`flex-1 h-9 px-3 rounded-md border text-sm font-mono focus:outline-none focus:ring-2 ${
+                      dialerMode === "real" && !editOAuthToken
+                        ? "border-[#EA4335] focus:ring-[#EA4335]/20 bg-red-50"
+                        : "border-zinc-200 focus:ring-zinc-900/10"
+                    }`}
+                  />
+                  <button
+                    onClick={() => setShowOAuth(o => !o)}
+                    className="size-9 grid place-items-center rounded-md border border-zinc-200 hover:bg-zinc-50 text-zinc-500 shrink-0"
+                    title={showOAuth ? "Hide token" : "Show token"}
+                  >
+                    {showOAuth ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                {editOAuthToken && (
+                  <p className="text-[10px] text-zinc-500 mt-1 font-mono truncate">
+                    {showOAuth ? editOAuthToken : `${editOAuthToken.slice(0, 12)}${"•".repeat(Math.max(0, editOAuthToken.length - 12))}`}
+                  </p>
+                )}
+                {dialerMode === "real" && !editOAuthToken && (
+                  <p className="text-[10px] text-[#EA4335] mt-1 font-medium">⚠️ Real calls won't work without this token.</p>
                 )}
               </div>
 
@@ -469,15 +509,18 @@ export function HeaderDialer({
                 onClick={() => {
                   const email = editEmail.trim();
                   const apiKey = editApiKey.trim();
-                  // Persist to localStorage via frejun service
+                  const oauthToken = editOAuthToken.trim();
+                  // Persist to localStorage
                   if (apiKey) setFrejunApiKey(apiKey);
+                  if (oauthToken) setFrejunOAuthToken(oauthToken);
                   if (email) {
                     setFrejunUserEmail(email);
                     if (onUpdateEmail) onUpdateEmail(email);
                   }
                   const saved = [];
                   if (email) saved.push(`Email: ${email}`);
-                  if (apiKey) saved.push(`Key: ${apiKey.slice(0, 8)}…`);
+                  if (apiKey) saved.push(`API Key: ${apiKey.slice(0, 8)}…`);
+                  if (oauthToken) saved.push(`OAuth Token: ${oauthToken.slice(0, 12)}…`);
                   if (saved.length) {
                     toast.success("FreJun settings saved", { description: saved.join(" · ") });
                   }
