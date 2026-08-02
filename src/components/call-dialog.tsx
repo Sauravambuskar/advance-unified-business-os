@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   PhoneOff, Mic, MicOff, Volume2, VolumeX,
@@ -7,11 +7,8 @@ import {
 import { initiateCall, formatPhoneE164, updateCallLog, type FrejunCallResponse } from "@/lib/frejun";
 import { toast } from "sonner";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
+// ─── Types ───────────────────────────────────────────────────────────────────
 type Line = { who: "agent" | "lead"; text: string; at: number };
-
-// ─── Script ─────────────────────────────────────────────────────────────────
 
 const SCRIPT: Line[] = [
   { who: "agent", text: "Hello, this is calling from Advance Group. Am I speaking with {name}?", at: 1200 },
@@ -35,23 +32,21 @@ function fmt(sec: number) {
   return `${m}:${s}`;
 }
 
-// ─── Audio Engine ────────────────────────────────────────────────────────────
-// One global AudioContext. Recreated per call. The key rule:
-//   startRinging() / startTalkEngine() MUST be called synchronously within
-//   a user-gesture callback (or its first setTimeout tick) so Chrome/Safari
-//   allow AudioContext.resume().
+// ─── Audio Engine (module-level globals) ─────────────────────────────────────
+// Using module globals avoids React closure staleness issues.
+// Every function reads/writes the same variables so there is no
+// "stale captured value" problem.
 
 let gCtx: AudioContext | null = null;
 let gMaster: GainNode | null = null;
 let gRingOsc1: OscillatorNode | null = null;
 let gRingOsc2: OscillatorNode | null = null;
 let gRingGain: GainNode | null = null;
-let gRingActive = false;
+let gRingActive = false; // the single kill-switch for the ring tick loop
 let gTalkOsc: OscillatorNode | null = null;
 let gTalkGain: GainNode | null = null;
-let gTalkFilter: BiquadFilterNode | null = null;
 
-function audioCtx(): AudioContext {
+function ensureCtx(): AudioContext {
   if (!gCtx || gCtx.state === "closed") {
     gCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     gMaster = gCtx.createGain();
@@ -62,19 +57,9 @@ function audioCtx(): AudioContext {
   return gCtx;
 }
 
-function stopRing() {
-  gRingActive = false;
-  if (gRingGain) { try { gRingGain.gain.value = 0; } catch {} }
-  try { gRingOsc1?.stop(); } catch {}
-  try { gRingOsc2?.stop(); } catch {}
-  gRingOsc1 = null;
-  gRingOsc2 = null;
-  gRingGain = null;
-}
-
-function startRing() {
-  stopRing();
-  const ctx = audioCtx();
+function audioStartRing() {
+  audioStopRing(); // clean slate
+  const ctx = ensureCtx();
   const master = gMaster!;
 
   const o1 = ctx.createOscillator();
@@ -90,28 +75,31 @@ function startRing() {
   gRingOsc1 = o1; gRingOsc2 = o2; gRingGain = g;
   gRingActive = true;
 
-  // 1s ON, 2s OFF pattern — check gRingActive before each step
-  const tick = () => {
+  // Beep pattern: 1s ON, 2s OFF — each iteration re-checks gRingActive
+  const beep = () => {
     if (!gRingActive || !gRingGain) return;
-    gRingGain.gain.value = 0.28;
+    gRingGain.gain.value = 0.3;
     setTimeout(() => {
       if (!gRingActive || !gRingGain) return;
       gRingGain.gain.value = 0;
-      setTimeout(() => { if (gRingActive) tick(); }, 2000);
+      setTimeout(() => { if (gRingActive) beep(); }, 2000);
     }, 1000);
   };
-  tick();
+  beep();
 }
 
-function stopTalk() {
-  if (gTalkGain) { try { gTalkGain.gain.value = 0; } catch {} }
-  try { gTalkOsc?.stop(); } catch {}
-  gTalkOsc = null; gTalkGain = null; gTalkFilter = null;
+function audioStopRing() {
+  // Kill the tick loop FIRST, then stop oscillators
+  gRingActive = false;
+  if (gRingGain) { try { gRingGain.gain.value = 0; } catch {} }
+  try { gRingOsc1?.stop(); } catch {}
+  try { gRingOsc2?.stop(); } catch {}
+  gRingOsc1 = null; gRingOsc2 = null; gRingGain = null;
 }
 
-function startTalk() {
-  stopTalk();
-  const ctx = audioCtx();
+function audioStartTalk() {
+  audioStopTalk();
+  const ctx = ensureCtx();
   const master = gMaster!;
 
   const osc = ctx.createOscillator();
@@ -123,10 +111,16 @@ function startTalk() {
 
   osc.connect(filter); filter.connect(gain); gain.connect(master);
   osc.start();
-  gTalkOsc = osc; gTalkFilter = filter; gTalkGain = gain;
+  gTalkOsc = osc; gTalkGain = gain;
 }
 
-function speak(durationMs = 1500) {
+function audioStopTalk() {
+  if (gTalkGain) { try { gTalkGain.gain.value = 0; } catch {} }
+  try { gTalkOsc?.stop(); } catch {}
+  gTalkOsc = null; gTalkGain = null;
+}
+
+function audioSpeak(durationMs = 1500) {
   if (!gTalkGain || !gCtx) return;
   const now = gCtx.currentTime;
   const dur = durationMs / 1000;
@@ -137,23 +131,22 @@ function speak(durationMs = 1500) {
   gTalkGain.gain.linearRampToValueAtTime(0, now + dur);
 }
 
-function setSpeaker(on: boolean) {
+function audioSetSpeaker(on: boolean) {
   if (gMaster) gMaster.gain.value = on ? 1 : 0;
 }
 
-/** Full silence — call on hangup. Kills everything. */
-function killAudio() {
-  gRingActive = false;
-  stopRing();
-  stopTalk();
+/** Kill ALL audio and close the AudioContext. Safe to call multiple times. */
+function audioKillAll() {
+  gRingActive = false; // stop the ring tick loop immediately
+  audioStopRing();
+  audioStopTalk();
   if (gMaster) { try { gMaster.gain.value = 0; } catch {} }
-  // Close and null the context so the next call gets a fresh one
   const ctx = gCtx;
   gCtx = null; gMaster = null;
-  setTimeout(() => { try { ctx?.close(); } catch {} }, 100);
+  setTimeout(() => { try { ctx?.close(); } catch {} }, 80);
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function CallDialog({
   open, onClose, name, phone, company, photo, onDisposition,
@@ -172,126 +165,59 @@ export function CallDialog({
   mode?: "simulated" | "real";
   userEmail?: string;
 }) {
-  const [phase, setPhase]           = useState<"dialing" | "connected" | "ended">("dialing");
-  const [seconds, setSeconds]       = useState(0);
-  const [muted, setMuted]           = useState(false);
-  const [speaker, setSpeakerState]  = useState(true);
-  const [held, setHeld]             = useState(false);
-  const [transcript, setTranscript] = useState<Line[]>([]);
-  const [showDisp, setShowDisp]     = useState(false);
-  const [disp, setDisp]             = useState("");
-  const [note, setNote]             = useState("");
-  const [temp, setTemp]             = useState("");
-  const [cbTime, setCbTime]         = useState<number | null>(null);
-  const [cbDate, setCbDate]         = useState("");
-  const [cbStr, setCbStr]           = useState("");
-  const [realId, setRealId]         = useState<number | null>(null);
-  const [callErr, setCallErr]       = useState<string | null>(null);
+  // ── call-scoped state ───────────────────────────────────────────────────
+  const [phase, setPhase]          = useState<"dialing" | "connected" | "ended">("dialing");
+  const [seconds, setSeconds]      = useState(0);
+  const [muted, setMuted]          = useState(false);
+  const [speakerOn, setSpeakerOn]  = useState(true);
+  const [held, setHeld]            = useState(false);
+  const [transcript, setTrans]     = useState<Line[]>([]);
+  const [callErr, setCallErr]      = useState<string | null>(null);
+  const [realId, setRealId]        = useState<number | null>(null);
 
-  const scrollRef        = useRef<HTMLDivElement>(null);
-  const timers           = useRef<number[]>([]);
-  const prevLen          = useRef(0);
-  const hangupCalledRef  = useRef(false); // prevent double-hangup
+  // ── disposition state (separate lifecycle from the call itself) ─────────
+  const [showDisp, setShowDisp]    = useState(false);
+  const [disp, setDisp]            = useState("");
+  const [note, setNote]            = useState("");
+  const [temp, setTemp]            = useState("");
+  const [cbTime, setCbTime]        = useState<number | null>(null);
+  const [cbDate, setCbDate]        = useState("");
+  const [cbStr, setCbStr]          = useState("");
 
-  // ── Clear all pending timers ────────────────────────────────────────────
-  const clearTimers = useCallback(() => {
-    timers.current.forEach(t => { window.clearTimeout(t); window.clearInterval(t); });
-    timers.current = [];
-  }, []);
+  // ── refs ────────────────────────────────────────────────────────────────
+  const scrollRef   = useRef<HTMLDivElement>(null);
+  const prevLen     = useRef(0);
+  // callEpoch: incremented every time a new call starts.
+  // Every async callback checks its captured epoch against current; if
+  // they differ the call was reset, so the callback does nothing.
+  const epochRef    = useRef(0);
+  // timers: all setTimeout/Interval IDs for the CURRENT call
+  const timersRef   = useRef<number[]>([]);
 
-  // ── Hangup — single authoritative function ──────────────────────────────
-  const hangup = useCallback(() => {
-    if (hangupCalledRef.current) return;
-    hangupCalledRef.current = true;
+  const clearCallTimers = () => {
+    timersRef.current.forEach(t => { window.clearTimeout(t); window.clearInterval(t); });
+    timersRef.current = [];
+  };
 
-    // 1. Kill audio immediately
-    killAudio();
+  // ── speaker sync ────────────────────────────────────────────────────────
+  useEffect(() => { audioSetSpeaker(speakerOn); }, [speakerOn]);
 
-    // 2. Cancel every pending timer (ringing auto-connect, transcript, tick)
-    clearTimers();
-
-    // 3. Update phase
-    setPhase("ended");
-
-    // 4. Show disposition after a short "Call Ended" flash, then close dialog
-    timers.current.push(window.setTimeout(() => {
-      if (onDisposition) {
-        setShowDisp(true);
-      } else {
-        onClose();
-      }
-    }, 700));
-  }, [clearTimers, onDisposition, onClose]);
-
-  // ── Initiate real FreJun call ───────────────────────────────────────────
-  const doRealCall = useCallback(async () => {
-    if (!userEmail || !userEmail.includes("@")) {
-      const msg = "Enter your FreJun account email in Dialer Settings (⚙ gear icon) to make real calls.";
-      setCallErr(msg);
-      toast.error("FreJun email not set", { description: msg, duration: 6000 });
-      // Fall back to simulated mode so the call still works
-      timers.current.push(window.setTimeout(() => { startRing(); }, 0));
-      timers.current.push(window.setTimeout(() => {
-        stopRing(); startTalk(); setPhase("connected");
-      }, 4000));
-      return;
-    }
-    try {
-      const e164 = formatPhoneE164(phone);
-      toast.info("Connecting via FreJun…", { description: `Dialling ${e164}` });
-      const res: FrejunCallResponse = await initiateCall(
-        e164, name,
-        { candidate_id: name.replace(/\s+/g, "-").toLowerCase(), transaction_id: `call-${Date.now()}` },
-        userEmail,
-      );
-      if (res.success && res.data) {
-        setRealId(res.data.call_id);
-        toast.success("FreJun is calling you", {
-          description: "Answer your phone — FreJun will then connect you to the lead.",
-          duration: 8000,
-        });
-        // Move UI to connected after ~6s (replace with webhook in production)
-        timers.current.push(window.setTimeout(() => setPhase("connected"), 6000));
-      } else {
-        // Frejun returned success:false with a message
-        const errMsg = res.message || "Call failed — check your FreJun account.";
-        setCallErr(errMsg);
-        toast.error("FreJun error", { description: errMsg, duration: 8000 });
-        // Don't auto-hangup — let user read the error and close manually
-        timers.current.push(window.setTimeout(() => setPhase("ended"), 1500));
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setCallErr(msg);
-      // Common causes shown in the toast for quick diagnosis
-      if (msg.includes("doesnt exist")) {
-        toast.error("FreJun: user not found", {
-          description: `"${userEmail}" is not an active user in this FreJun account. Use the email you log into product.frejun.com with.`,
-          duration: 10000,
-        });
-      } else if (msg.includes("401") || msg.includes("403") || msg.includes("Unauthorized")) {
-        toast.error("FreJun: auth failed", {
-          description: "API key rejected. Check Settings → Developer in product.frejun.com.",
-          duration: 10000,
-        });
-      } else {
-        toast.error("FreJun call error", { description: msg, duration: 8000 });
-      }
-      timers.current.push(window.setTimeout(() => setPhase("ended"), 1500));
-    }
-  }, [userEmail, phone, name]);
-
-  // ── Open effect — runs once per open=true ───────────────────────────────
+  // ── main call lifecycle effect ──────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
 
-    // Reset everything
-    hangupCalledRef.current = false;
+    // ── NEW CALL: bump epoch so any lingering async from previous call dies
+    const myEpoch = epochRef.current + 1;
+    epochRef.current = myEpoch;
+
+    // ── reset all call state ──────────────────────────────────────────────
+    clearCallTimers();
+    audioKillAll(); // kill any leftover audio from previous call
     setPhase("dialing");
     setSeconds(0);
-    setTranscript([]);
+    setTrans([]);
     setMuted(false);
-    setSpeakerState(true);
+    setSpeakerOn(true);
     setHeld(false);
     setCallErr(null);
     setRealId(null);
@@ -300,55 +226,116 @@ export function CallDialog({
     setCbTime(null); setCbDate(""); setCbStr("");
     prevLen.current = 0;
 
+    const isAlive = () => epochRef.current === myEpoch;
+
     if (mode === "real" && userEmail?.includes("@")) {
-      doRealCall();
+      // ── REAL MODE: call FreJun API ──────────────────────────────────────
+      (async () => {
+        try {
+          const e164 = formatPhoneE164(phone);
+          toast.info("Connecting via FreJun…", { description: `Dialling ${e164}` });
+
+          const res: FrejunCallResponse = await initiateCall(
+            e164, name,
+            { candidate_id: name.replace(/\s+/g, "-").toLowerCase(), transaction_id: `call-${Date.now()}` },
+            userEmail,
+          );
+
+          if (!isAlive()) return; // user hung up while API was in-flight
+
+          if (res.success && res.data) {
+            setRealId(res.data.call_id);
+            toast.success("FreJun is calling you", {
+              description: "Answer your phone — FreJun will connect you to the lead.",
+              duration: 8000,
+            });
+            timersRef.current.push(window.setTimeout(() => {
+              if (isAlive()) setPhase("connected");
+            }, 6000));
+          } else {
+            const errMsg = res.message || "Call failed";
+            setCallErr(errMsg);
+            toast.error("FreJun error", { description: errMsg, duration: 8000 });
+            if (isAlive()) setPhase("ended");
+          }
+        } catch (err) {
+          if (!isAlive()) return;
+          const msg = err instanceof Error ? err.message : String(err);
+          setCallErr(msg);
+          if (msg.includes("doesnt exist")) {
+            toast.error("FreJun: user not found", {
+              description: `"${userEmail}" is not registered in this FreJun account.`,
+              duration: 10000,
+            });
+          } else if (msg.includes("401") || msg.includes("403")) {
+            toast.error("FreJun: auth failed", {
+              description: "API key invalid — check FreJun → Settings → Developer.",
+              duration: 10000,
+            });
+          } else {
+            toast.error("FreJun error", { description: msg, duration: 8000 });
+          }
+          if (isAlive()) setPhase("ended");
+        }
+      })();
     } else {
-      // setTimeout(0) keeps us in the same event-loop tick as the click
-      // gesture so AudioContext.resume() is allowed by the browser
-      timers.current.push(window.setTimeout(() => { startRing(); }, 0));
-      // Auto-connect after 4s (simulated ring)
-      timers.current.push(window.setTimeout(() => {
-        stopRing();
-        startTalk();
+      // ── SIMULATED MODE ──────────────────────────────────────────────────
+      // setTimeout(0) keeps audio creation in the same gesture tick
+      timersRef.current.push(window.setTimeout(() => {
+        if (!isAlive()) return;
+        audioStartRing();
+      }, 0));
+
+      // Auto-connect after 4s
+      timersRef.current.push(window.setTimeout(() => {
+        if (!isAlive()) return;
+        audioStopRing();
+        audioStartTalk();
         setPhase("connected");
       }, 4000));
     }
 
+    // ── CLEANUP: runs when open→false OR component unmounts ───────────────
     return () => {
-      clearTimers();
-      killAudio();
+      // Invalidate this call's epoch so async callbacks become no-ops
+      epochRef.current = myEpoch + 1;
+      clearCallTimers();
+      audioKillAll();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open]); // intentionally only re-run when open changes — NOT on mode/userEmail/name/phone
 
-  // ── Speaker toggle ──────────────────────────────────────────────────────
-  useEffect(() => { setSpeaker(speaker); }, [speaker]);
-
-  // ── Connected: timer + simulated transcript ─────────────────────────────
+  // ── call timer (increments while connected and not held) ────────────────
   useEffect(() => {
     if (phase !== "connected") return;
-    const tick = window.setInterval(() => { if (!held) setSeconds(s => s + 1); }, 1000);
-    timers.current.push(tick);
-    if (mode === "simulated") {
-      SCRIPT.forEach(line => {
-        timers.current.push(window.setTimeout(() => {
-          setTranscript(prev => [...prev, { ...line, text: line.text.replace("{name}", name.split(" ")[0]) }]);
-        }, line.at));
-      });
-    }
-    return () => { window.clearInterval(tick); };
-  }, [phase, held, name, mode]);
+    const id = window.setInterval(() => {
+      if (!held) setSeconds(s => s + 1);
+    }, 1000);
+    timersRef.current.push(id);
+    return () => window.clearInterval(id);
+  }, [phase, held]);
 
-  // ── Auto-scroll transcript ──────────────────────────────────────────────
+  // ── simulated transcript playback ────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== "connected" || mode !== "simulated") return;
+    const epoch = epochRef.current;
+    SCRIPT.forEach(line => {
+      timersRef.current.push(window.setTimeout(() => {
+        if (epochRef.current !== epoch) return;
+        setTrans(prev => [...prev, { ...line, text: line.text.replace("{name}", name.split(" ")[0]) }]);
+      }, line.at));
+    });
+  }, [phase, name, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── auto-scroll transcript ───────────────────────────────────────────────
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [transcript]);
 
-  // ── Speak sound when lead line appears ─────────────────────────────────
+  // ── speak sound on new lead lines ────────────────────────────────────────
   useEffect(() => {
     if (transcript.length > prevLen.current) {
       transcript.slice(prevLen.current).forEach(l => {
-        if (l.who === "lead") speak(Math.min(l.text.split(" ").length * 120, 3000));
+        if (l.who === "lead") audioSpeak(Math.min(l.text.split(" ").length * 120, 3000));
       });
     }
     prevLen.current = transcript.length;
@@ -356,38 +343,57 @@ export function CallDialog({
 
   if (!open) return null;
 
-  // ── Disposition submit ──────────────────────────────────────────────────
-  const submitDisp = () => {
-    let hrs = cbTime;
+  // ── HANGUP ───────────────────────────────────────────────────────────────
+  // Invalidates the epoch so all pending async/timers become no-ops,
+  // then kills audio and shows the disposition panel.
+  const hangup = () => {
+    if (phase === "ended") return; // already hung up
+
+    // Invalidate epoch — any pending setTimeout/async checks isAlive() and exits
+    epochRef.current += 1;
+    clearCallTimers();
+    audioKillAll();
+    setPhase("ended");
+
+    // Show disposition panel after a brief "Call Ended" flash
+    // Use a fresh setTimeout OUTSIDE timersRef so it isn't cleared by clearCallTimers
+    if (onDisposition) {
+      window.setTimeout(() => setShowDisp(true), 600);
+    } else {
+      window.setTimeout(() => onClose(), 800);
+    }
+  };
+
+  // ── disposition helpers ──────────────────────────────────────────────────
+  const calcHrs = () => {
     if (cbDate) {
       const dt = new Date(cbStr ? `${cbDate}T${cbStr}` : `${cbDate}T10:00`);
       const diff = dt.getTime() - Date.now();
-      if (diff > 0) hrs = Math.round(diff / 3_600_000);
+      if (diff > 0) return Math.round(diff / 3_600_000);
     }
+    return cbTime;
+  };
+
+  const submitDisp = () => {
+    const hrs = calcHrs();
     onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
     if (mode === "real" && realId !== null) {
-      updateCallLog(String(realId), { notes: note || undefined, call_outcome: disp || "Follow Up" }).catch(console.error);
+      updateCallLog(String(realId), {
+        notes: note || undefined, call_outcome: disp || "Follow Up",
+      }).catch(console.error);
     }
-    resetDisp(); onClose();
+    setShowDisp(false); onClose();
   };
 
   const skipDisp = () => {
-    let hrs = cbTime;
-    if (cbDate) {
-      const dt = new Date(cbStr ? `${cbDate}T${cbStr}` : `${cbDate}T10:00`);
-      const diff = dt.getTime() - Date.now();
-      if (diff > 0) hrs = Math.round(diff / 3_600_000);
+    const hrs = calcHrs();
+    if (disp || temp || hrs) {
+      onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
     }
-    if (disp || temp || hrs) onDisposition?.(disp || "Follow Up", note, seconds, temp || "Warm", hrs);
-    resetDisp(); onClose();
+    setShowDisp(false); onClose();
   };
 
-  const resetDisp = () => {
-    setShowDisp(false); setDisp(""); setNote(""); setTemp("");
-    setCbTime(null); setCbDate(""); setCbStr("");
-  };
-
-  // ── Sentiment ───────────────────────────────────────────────────────────
+  // ── sentiment ────────────────────────────────────────────────────────────
   const txt = transcript.map(t => t.text).join(" ").toLowerCase();
   const pos = SENTIMENT.positive.filter(k => txt.includes(k)).length;
   const neg = SENTIMENT.negative.filter(k => txt.includes(k)).length;
@@ -396,74 +402,72 @@ export function CallDialog({
                   : sentiment === "Negative" ? "bg-[#EA4335] text-white"
                   : "bg-zinc-500 text-white";
 
-  // ── Render ──────────────────────────────────────────────────────────────
+
+  // ── render ───────────────────────────────────────────────────────────────
   const callPanel = (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-zinc-950/75 backdrop-blur-sm">
-      {/* clicking the backdrop does NOT hangup — prevents accidental dismissal */}
       <div className="relative w-full max-w-5xl h-[92vh] sm:h-[86vh] bg-white shadow-2xl ring-1 ring-black/10 overflow-hidden grid grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
 
-        {/* ── LEFT: Call controls ── */}
+        {/* LEFT ─ call controls */}
         <div className="relative bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] text-white flex flex-col min-h-0">
 
-          {/* Header bar */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+          {/* top bar */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/70">
               <span className={`size-2 rounded-full ${
                 phase === "connected" ? "bg-[#34A853] animate-pulse" :
                 phase === "dialing"   ? "bg-[#FBBC05] animate-pulse" : "bg-[#EA4335]"
               }`} />
               {phase === "dialing" ? "Ringing…" : phase === "connected" ? "Live Call" : "Call Ended"}
-              {mode === "real" && (
+              {mode === "real" && phase !== "ended" && (
                 <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold bg-[#34A853] text-white rounded">LIVE</span>
               )}
             </div>
-            {/* X only closes after call is ended */}
-            {phase === "ended" && (
-              <button onClick={hangup} className="size-8 grid place-items-center rounded-md hover:bg-white/10 text-white/70">
+            {/* X only after call ended */}
+            {phase === "ended" && !showDisp && (
+              <button onClick={() => onClose()} className="size-8 grid place-items-center rounded-md hover:bg-white/10 text-white/70">
                 <X className="size-4" />
               </button>
             )}
           </div>
 
-          {/* Avatar + info */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-4">
+          {/* avatar + status */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 gap-4 min-h-0">
             <div className="relative">
               {phase === "dialing" && (
                 <span className="absolute inset-0 rounded-full animate-ping bg-white/20 pointer-events-none" />
               )}
-              {photo ? (
-                <img src={photo} alt={name} className="relative size-32 rounded-full object-cover ring-4 ring-white/20" />
-              ) : (
-                <div className="relative size-32 rounded-full bg-white/10 ring-4 ring-white/20 grid place-items-center">
-                  <User className="size-14 text-white/70" />
-                </div>
-              )}
+              {photo
+                ? <img src={photo} alt={name} className="relative size-28 rounded-full object-cover ring-4 ring-white/20" />
+                : <div className="relative size-28 rounded-full bg-white/10 ring-4 ring-white/20 grid place-items-center">
+                    <User className="size-12 text-white/70" />
+                  </div>
+              }
             </div>
 
             <div className="text-center">
               <p className="text-2xl font-semibold">{name}</p>
               <p className="text-sm text-white/70">{company}</p>
-              <p className="text-sm text-white/60 mt-1 tracking-wide">{phone}</p>
+              <p className="text-sm text-white/50 mt-0.5 tracking-wide font-mono">{phone}</p>
               {mode === "real" && phase === "dialing" && (
                 <p className="text-xs text-[#FBBC05] mt-2 font-medium animate-pulse">
-                  📞 FreJun is calling you — answer your phone first!
+                  📞 FreJun is calling you first — answer your phone!
                 </p>
               )}
-              {callErr && <p className="text-xs text-[#EA4335] mt-2">⚠️ {callErr}</p>}
+              {callErr && <p className="text-xs text-[#EA4335] mt-2 max-w-xs">⚠️ {callErr}</p>}
             </div>
 
-            <div className="text-3xl font-mono tabular-nums tracking-widest mt-1">
+            <div className="text-4xl font-mono tabular-nums tracking-widest">
               {phase === "dialing" ? "00:00" : fmt(seconds)}
             </div>
 
-            {/* Voice waveform animation */}
             {phase === "connected" && (
-              <div className="flex items-center gap-0.5 h-8">
-                {Array.from({ length: 28 }).map((_, i) => (
-                  <span key={i} className="w-1 rounded-full bg-white/50"
+              <div className="flex items-end gap-0.5 h-8">
+                {Array.from({ length: 30 }).map((_, i) => (
+                  <span key={i} className="w-[3px] rounded-full bg-white/50"
                     style={{
-                      height: `${muted ? 3 : 4 + Math.abs(Math.sin((seconds + i) * 0.65)) * 20}px`,
-                      transition: "height 180ms ease",
+                      height: `${muted ? 3 : 3 + Math.abs(Math.sin((seconds * 2 + i) * 0.6)) * 22}px`,
+                      transition: "height 160ms ease",
                     }}
                   />
                 ))}
@@ -475,56 +479,52 @@ export function CallDialog({
             )}
           </div>
 
-          {/* Control bar */}
+          {/* control bar */}
           <div className="shrink-0 px-6 pb-6 pt-2 grid grid-cols-5 gap-3 bg-gradient-to-t from-[#0a1628] to-transparent">
-            <Ctrl icon={muted ? MicOff : Mic}     label={muted ? "Unmute" : "Mute"}      active={muted}     onClick={() => setMuted(m => !m)} />
-            <Ctrl icon={held  ? Play  : Pause}    label={held  ? "Resume" : "Hold"}      active={held}      onClick={() => setHeld(h => !h)} />
-            <Ctrl icon={speaker ? Volume2 : VolumeX} label={speaker ? "Speaker" : "Muted"} active={!speaker} onClick={() => setSpeakerState(s => !s)} />
-            <Ctrl icon={Video}                    label="Video"                          active={false}     onClick={() => {}} />
+            <Ctrl icon={muted    ? MicOff  : Mic}     label={muted    ? "Unmute"  : "Mute"}    active={muted}     onClick={() => setMuted(m => !m)} />
+            <Ctrl icon={held     ? Play    : Pause}   label={held     ? "Resume"  : "Hold"}    active={held}      onClick={() => setHeld(h => !h)} />
+            <Ctrl icon={speakerOn ? Volume2 : VolumeX} label={speakerOn ? "Speaker" : "Muted"} active={!speakerOn} onClick={() => setSpeakerOn(s => !s)} />
+            <Ctrl icon={Video}                         label="Video"                            active={false}     onClick={() => {}} />
             <button
               onClick={hangup}
               disabled={phase === "ended"}
-              className="flex flex-col items-center gap-1 rounded-md bg-[#EA4335] hover:bg-[#c5372c] disabled:opacity-40 px-3 py-2.5 transition-colors"
+              className="flex flex-col items-center gap-1 rounded-md bg-[#EA4335] hover:bg-[#c5372c] active:scale-95 disabled:opacity-40 px-3 py-2.5 transition-all"
             >
               <PhoneOff className="size-5" />
-              <span className="text-[10px] font-medium">End</span>
+              <span className="text-[10px] font-semibold">End</span>
             </button>
           </div>
         </div>
 
-        {/* ── RIGHT: Transcript + AI ── */}
+        {/* RIGHT ─ transcript + AI */}
         <div className="flex flex-col min-h-0 bg-zinc-50 border-l border-zinc-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 bg-white shrink-0">
             <div className="flex items-center gap-2">
               <MessageSquare className="size-4 text-zinc-700" />
               <span className="text-sm font-semibold">Live Transcription</span>
-              {phase !== "ended" && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#EA4335] text-white">
-                  <span className="size-1.5 rounded-full bg-white animate-pulse" /> REC
-                </span>
-              )}
-              {phase === "ended" && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-zinc-200 text-zinc-600">ENDED</span>
-              )}
+              {phase === "ended"
+                ? <span className="px-1.5 py-0.5 text-[10px] font-medium bg-zinc-200 text-zinc-600">ENDED</span>
+                : <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#EA4335] text-white">
+                    <span className="size-1.5 rounded-full bg-white animate-pulse" /> REC
+                  </span>
+              }
             </div>
             <span className={`px-2 py-0.5 text-[10px] font-semibold ${sentTone}`}>{sentiment}</span>
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin min-h-0">
             {phase === "dialing" && (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-zinc-500 text-xs mt-12">
+              <div className="flex flex-col items-center justify-center gap-3 text-zinc-500 text-xs mt-12">
                 <div className="flex gap-1.5">
-                  {[0, 150, 300].map(d => (
-                    <span key={d} className="size-2.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
+                  {[0,150,300].map(d => <span key={d} className="size-2.5 rounded-full bg-zinc-300 animate-bounce" style={{ animationDelay:`${d}ms` }} />)}
                 </div>
-                <p>{mode === "real" ? "Waiting for FreJun to bridge the call…" : "Ringing…"}</p>
+                <p>{mode === "real" ? "Waiting for FreJun to bridge…" : "Ringing…"}</p>
               </div>
             )}
             {mode === "real" && phase === "connected" && transcript.length === 0 && (
-              <div className="mt-8 p-4 bg-amber-50 ring-1 ring-amber-200 text-xs text-center">
+              <div className="mt-8 p-4 bg-amber-50 ring-1 ring-amber-200 text-xs text-center rounded">
                 <p className="font-semibold text-amber-800">Real Call Active</p>
-                <p className="mt-1 text-zinc-600">Live transcription not available in real call mode.</p>
+                <p className="mt-1 text-zinc-600">Live transcription unavailable in real mode.</p>
               </div>
             )}
             {transcript.map((line, i) => (
@@ -542,15 +542,13 @@ export function CallDialog({
             {phase === "connected" && transcript.length > 0 && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 bg-white ring-1 ring-zinc-200 flex gap-1">
-                  {[0, 150, 300].map(d => (
-                    <span key={d} className="size-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
+                  {[0,150,300].map(d => <span key={d} className="size-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay:`${d}ms` }} />)}
                 </div>
               </div>
             )}
           </div>
 
-          {/* AI panel */}
+          {/* AI suggestions */}
           <div className="border-t border-zinc-200 bg-white p-3 space-y-2 shrink-0">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700">
               <Sparkles className="size-3.5 text-[#FBBC05]" /> AI Suggestions
@@ -574,7 +572,7 @@ export function CallDialog({
     </div>
   );
 
-  // ── Disposition panel ───────────────────────────────────────────────────
+  // ── disposition panel (rendered ON TOP of the call panel) ────────────────
   const dispPanel = showDisp ? (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
       <div className="relative w-full max-w-lg bg-white shadow-[0_25px_60px_rgba(0,0,0,0.18)] ring-1 ring-zinc-950/10 overflow-hidden">
@@ -583,24 +581,25 @@ export function CallDialog({
             <p className="text-sm font-semibold">Log Call Outcome</p>
             <p className="text-[11px] text-zinc-500 mt-0.5">{name} · {fmt(seconds)}</p>
           </div>
-          <button onClick={skipDisp} className="size-8 grid place-items-center hover:bg-zinc-100 text-zinc-500">
+          <button onClick={skipDisp} className="size-8 grid place-items-center hover:bg-zinc-100 text-zinc-500 rounded">
             <X className="size-4" />
           </button>
         </div>
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
 
-          {/* Temperature */}
+        <div className="p-5 space-y-4 max-h-[78vh] overflow-y-auto">
+
+          {/* Lead temperature */}
           <div>
             <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Lead Quality</p>
             <div className="grid grid-cols-3 gap-2">
-              {(["Hot", "Warm", "Cold"] as const).map(t => (
+              {(["Hot","Warm","Cold"] as const).map(t => (
                 <button key={t} onClick={() => setTemp(t)}
-                  className={`h-10 text-xs font-semibold ${
-                    t === "Hot"  ? (temp === t ? "bg-red-500 text-white"   : "ring-1 ring-zinc-200 hover:bg-red-50")   :
-                    t === "Warm" ? (temp === t ? "bg-amber-500 text-white" : "ring-1 ring-zinc-200 hover:bg-amber-50") :
-                                   (temp === t ? "bg-blue-500 text-white"  : "ring-1 ring-zinc-200 hover:bg-blue-50")
+                  className={`h-10 text-sm font-semibold rounded transition-colors ${
+                    t === "Hot"  ? (temp === t ? "bg-red-500 text-white"   : "ring-1 ring-zinc-200 hover:bg-red-50")
+                  : t === "Warm" ? (temp === t ? "bg-amber-400 text-white" : "ring-1 ring-zinc-200 hover:bg-amber-50")
+                  :               (temp === t ? "bg-blue-500 text-white"  : "ring-1 ring-zinc-200 hover:bg-blue-50")
                   }`}>
-                  {t === "Hot" ? "🔥" : t === "Warm" ? "☀️" : "❄️"} {t}
+                  {t === "Hot" ? "🔥 Hot" : t === "Warm" ? "☀️ Warm" : "❄️ Cold"}
                 </button>
               ))}
             </div>
@@ -612,22 +611,22 @@ export function CallDialog({
             <div className="grid grid-cols-3 gap-1.5">
               {["Interested","Follow Up","No Answer","Not Interested","Voicemail","Wrong Number"].map(d => (
                 <button key={d} onClick={() => setDisp(d)}
-                  className={`text-[11px] font-medium px-2 py-2 ${disp === d ? "bg-zinc-900 text-white" : "ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
-                  {d}
-                </button>
+                  className={`text-[11px] font-medium px-2 py-2 rounded transition-colors ${
+                    disp === d ? "bg-zinc-900 text-white" : "ring-1 ring-zinc-200 hover:bg-zinc-50"
+                  }`}>{d}</button>
               ))}
             </div>
           </div>
 
-          {/* Callback scheduler */}
+          {/* Schedule callback */}
           <div>
             <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">📞 Schedule Callback</p>
             <div className="grid grid-cols-4 gap-1.5 mb-2">
               {[{l:"1 hr",h:1},{l:"4 hr",h:4},{l:"Tomorrow",h:24},{l:"3 days",h:72}].map(o => (
                 <button key={o.l} onClick={() => { setCbTime(o.h); setCbDate(""); setCbStr(""); }}
-                  className={`text-[10px] font-semibold py-2 ${cbTime === o.h && !cbDate ? "bg-violet-600 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-violet-50"}`}>
-                  {o.l}
-                </button>
+                  className={`text-[10px] font-semibold py-2 rounded transition-colors ${
+                    cbTime === o.h && !cbDate ? "bg-violet-600 text-white" : "ring-1 ring-zinc-200 bg-white hover:bg-violet-50"
+                  }`}>{o.l}</button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -636,12 +635,12 @@ export function CallDialog({
                 <input type="date" value={cbDate}
                   min={new Date().toISOString().split("T")[0]}
                   onChange={e => { setCbDate(e.target.value); setCbTime(null); }}
-                  className="mt-1 w-full h-9 px-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
+                  className="mt-1 w-full h-9 px-2 border border-zinc-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
               </div>
               <div>
                 <label className="text-[10px] text-zinc-500 font-medium">Time</label>
                 <input type="time" value={cbStr} onChange={e => setCbStr(e.target.value)}
-                  className="mt-1 w-full h-9 px-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
+                  className="mt-1 w-full h-9 px-2 border border-zinc-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/30" />
               </div>
             </div>
           </div>
@@ -650,13 +649,13 @@ export function CallDialog({
           <div>
             <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Note</p>
             <textarea value={note} onChange={e => setNote(e.target.value)}
-              placeholder="Call note (optional)" rows={2}
-              className="w-full px-3 py-2 border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none" />
+              placeholder="Call note…" rows={2}
+              className="w-full px-3 py-2 border border-zinc-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 resize-none" />
           </div>
 
           <div className="flex gap-2 pt-1">
-            <button onClick={skipDisp}  className="flex-1 h-10 ring-1 ring-zinc-200 text-sm font-semibold hover:bg-zinc-50">Skip</button>
-            <button onClick={submitDisp} className="flex-1 h-10 bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800">Save & Close</button>
+            <button onClick={skipDisp}   className="flex-1 h-10 ring-1 ring-zinc-200 text-sm font-semibold hover:bg-zinc-50 rounded">Skip</button>
+            <button onClick={submitDisp} className="flex-1 h-10 bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 rounded">Save & Close</button>
           </div>
         </div>
       </div>
@@ -668,14 +667,14 @@ export function CallDialog({
     : <>{callPanel}{dispPanel}</>;
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Ctrl({ icon: Icon, label, active, onClick, disabled = false }: {
-  icon: any; label: string; active: boolean; onClick: () => void; disabled?: boolean;
+function Ctrl({ icon: Icon, label, active, onClick }: {
+  icon: any; label: string; active: boolean; onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} disabled={disabled}
-      className={`flex flex-col items-center gap-1 rounded-md px-3 py-2.5 transition-colors disabled:opacity-40 ${
+    <button onClick={onClick}
+      className={`flex flex-col items-center gap-1 rounded-md px-3 py-2.5 transition-colors ${
         active ? "bg-white text-zinc-900" : "bg-white/10 hover:bg-white/20 text-white"
       }`}>
       <Icon className="size-5" />
@@ -685,14 +684,22 @@ function Ctrl({ icon: Icon, label, active, onClick, disabled = false }: {
 }
 
 function aiSuggestions(t: Line[]): string[] {
-  if (t.length === 0) return ["Greet the lead by name and confirm identity.", "Reference the last touchpoint or proposal."];
+  if (t.length === 0) return [
+    "Greet the lead by name and confirm identity.",
+    "Reference the last touchpoint or proposal.",
+  ];
   const text = t.map(x => x.text).join(" ").toLowerCase();
   const out: string[] = [];
-  if (text.includes("pricing") || text.includes("expensive")) out.push("Address pricing — highlight ROI and phased payment options.");
-  if (text.includes("timeline") || text.includes("go-live") || text.includes("quarter")) out.push("Confirm timeline; offer a phased rollout plan.");
-  if (text.includes("po") || text.includes("finance")) out.push("Loop in Finance and share the PO format template.");
-  if (text.includes("proposal")) out.push("Offer to walk through the proposal section by section.");
-  if (out.length === 0) out.push("Ask an open-ended discovery question about their current workflow.");
+  if (text.includes("pricing") || text.includes("expensive"))
+    out.push("Address pricing — highlight ROI and phased payment options.");
+  if (text.includes("timeline") || text.includes("go-live") || text.includes("quarter"))
+    out.push("Confirm timeline; offer a phased rollout plan.");
+  if (text.includes("po") || text.includes("finance"))
+    out.push("Loop in Finance and share the PO format template.");
+  if (text.includes("proposal"))
+    out.push("Offer to walk through the proposal section by section.");
+  if (out.length === 0)
+    out.push("Ask an open-ended discovery question about their current workflow.");
   out.push("Set a clear next step and send a calendar invite before ending.");
   return out.slice(0, 4);
 }
