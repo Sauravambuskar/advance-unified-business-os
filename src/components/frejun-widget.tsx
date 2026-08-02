@@ -47,6 +47,7 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
   const iframeRef   = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
 
   // ── Send a message to the iframe ─────────────────────────────────────────
   const send = useCallback((msg: object) => {
@@ -81,10 +82,12 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
         // "authorize" succeeded = no explicit event, but calls start working.
         // We treat absence of "unauthorized" after authorize as success.
         case "incoming-call":
+          setIsCallActive(true);
           onIncomingCall?.(event.data);
           break;
 
         case "call-ended":
+          setIsCallActive(false);
           onCallEnded?.(event.data);
           break;
 
@@ -115,6 +118,7 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
     initiateCall({ candidateNumber, candidateName, transactionId }) {
       const access_token = getFrejunOAuthToken();
       const user_email   = getFrejunUserEmail();
+      setIsCallActive(true);
       send({
         eventName: "initiate-call",
         data: {
@@ -128,34 +132,64 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
     },
 
     endCall() {
+      setIsCallActive(false);
       send({ eventName: "end-call" });
     },
   }), [ready, authorized, authorize, send]);
 
-  // ── Render: hidden iframe, stays mounted ──────────────────────────────────
+  // ── Render: iframe that becomes visible during calls ──────────────────────
   // We render into document.body via portal so it isn't affected by any
   // parent overflow/transform containing blocks.
+  // When a call is active, the iframe becomes visible and interactive.
   return typeof document !== "undefined"
     ? createPortal(
-        <iframe
-          ref={iframeRef}
-          src={DIALER_SRC}
-          allow="microphone"
-          aria-hidden="true"
-          tabIndex={-1}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: 1,
-            height: 1,
-            opacity: 0,
-            pointerEvents: "none",
-            border: "none",
-            zIndex: -1,
-          }}
-          title="FreJun Dialer"
-        />,
+        <>
+          {/* Backdrop */}
+          {isCallActive && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.75)",
+                backdropFilter: "blur(4px)",
+                zIndex: 9998,
+              }}
+              onClick={() => {
+                // Allow clicking backdrop to close (end call)
+                if (window.confirm("End the call?")) {
+                  setIsCallActive(false);
+                  send({ eventName: "end-call" });
+                }
+              }}
+            />
+          )}
+          {/* FreJun Widget Iframe */}
+          <iframe
+            ref={iframeRef}
+            src={DIALER_SRC}
+            allow="microphone; camera; autoplay; speaker-selection; display-capture"
+            aria-hidden={!isCallActive}
+            tabIndex={isCallActive ? 0 : -1}
+            style={{
+              position: "fixed",
+              top: isCallActive ? "50%" : 0,
+              left: isCallActive ? "50%" : 0,
+              transform: isCallActive ? "translate(-50%, -50%)" : "none",
+              width: isCallActive ? "420px" : 1,
+              height: isCallActive ? "600px" : 1,
+              maxWidth: isCallActive ? "90vw" : 1,
+              maxHeight: isCallActive ? "90vh" : 1,
+              opacity: isCallActive ? 1 : 0,
+              pointerEvents: isCallActive ? "auto" : "none",
+              border: "none",
+              zIndex: isCallActive ? 9999 : -1,
+              boxShadow: isCallActive ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
+              borderRadius: isCallActive ? "12px" : 0,
+              transition: "all 0.3s ease",
+            }}
+            title="FreJun Dialer"
+          />
+        </>,
         document.body,
       )
     : null;
