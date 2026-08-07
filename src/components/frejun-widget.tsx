@@ -48,6 +48,8 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // ── Send a message to the iframe ─────────────────────────────────────────
   const send = useCallback((msg: object) => {
@@ -141,7 +143,7 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
   // We render into document.body via portal so it isn't affected by any
   // parent overflow/transform containing blocks.
   // When a call is active, the iframe becomes visible and interactive.
-  return typeof document !== "undefined"
+  return mounted && typeof document !== "undefined"
     ? createPortal(
         <>
           {/* Backdrop */}
