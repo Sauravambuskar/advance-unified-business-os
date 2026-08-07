@@ -48,6 +48,8 @@ export const FrejunDialerWidget = forwardRef<FrejunWidgetRef, {
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // ── Send a message to the iframe ─────────────────────────────────────────
   const send = useCallback((msg: object) => {
